@@ -1,0 +1,16 @@
+# key r g b a
+# Visual palette for the tilemap and UI
+grass 60 105 60 255
+path 120 100 70 255
+base 0 120 255 255
+grid 55 55 55 255
+enemy 255 50 50 255
+tower_basic 50 255 50 255
+tower_sniper 255 180 40 255
+tower_splash 180 80 255 255
+projectile_basic 255 220 0 255
+projectile_sniper 255 255 255 255
+projectile_splash 180 80 255 255
+button_retry 200 60 60 255
+button_retry_hover 230 90 90 255
+overlay 0 0 0 160
