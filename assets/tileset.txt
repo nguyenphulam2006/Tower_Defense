@@ -1,16 +1,33 @@
 # key r g b a
-# Visual palette for the tilemap and UI
+# --- Môi trường & Bản đồ ---
 grass 60 105 60 255
 path 120 100 70 255
 base 0 120 255 255
+water 40 100 200 255
+mountain 100 100 100 255
 grid 55 55 55 255
-enemy 255 50 50 255
+
+# --- Quái vật (Enemies) ---
+enemy_normal 255 50 50 255
+enemy_fast 255 150 50 255
+enemy_tank 150 0 0 255
+
+# --- Tháp (Towers) ---
 tower_basic 50 255 50 255
 tower_sniper 255 180 40 255
 tower_splash 180 80 255 255
+
+# --- Đạn (Projectiles) ---
 projectile_basic 255 220 0 255
 projectile_sniper 255 255 255 255
 projectile_splash 180 80 255 255
+
+# --- Giao diện (UI) ---
 button_retry 200 60 60 255
 button_retry_hover 230 90 90 255
+button_menu 70 130 180 255
+button_menu_hover 100 160 210 255
+ui_panel 30 30 40 220
+ui_text 255 255 255 255
+ui_text_highlight 255 255 0 255
 overlay 0 0 0 160

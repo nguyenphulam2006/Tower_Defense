@@ -50,10 +50,13 @@ float distanceSquared(float x1, float y1, float x2, float y2) {
 }
 
 void LogicSystem::update(GameData& data, float deltaTime) {
-    if (data.gameOver) {
+if (data.gameState != GameState::Playing) {
         return;
     }
-
+    if (data.baseHP <= 0) {
+        data.gameState = GameState::GameOver;
+        return;
+    }
     if (data.waveInProgress) {
         data.spawnTimer += deltaTime;
         if (data.enemiesSpawnedThisWave < data.enemiesPerWave && data.spawnTimer >= SPAWN_INTERVAL) {
@@ -94,6 +97,9 @@ void LogicSystem::update(GameData& data, float deltaTime) {
                 enemy.currentStep++;
             } else {
                 data.baseHP--;
+                if (data.baseHP >= 0 && data.baseHP < 3) {
+                    data.lostHeartTime[data.baseHP] = SDL_GetTicks();
+                }
                 enemy.active = false;
                 std::cout << "Canh bao: Quai da lot vao Base! Mau hien tai: " << data.baseHP << std::endl;
             }
@@ -203,8 +209,4 @@ void LogicSystem::update(GameData& data, float deltaTime) {
             return !projectile.active;
         }),
         data.projectiles.end());
-
-    if (data.baseHP <= 0) {
-        data.gameOver = true;
-    }
 }

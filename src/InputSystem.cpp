@@ -2,31 +2,6 @@
 #include <iostream>
 
 namespace {
-int getTowerCost(TowerType type) {
-    switch (type) {
-        case TowerType::Basic:
-            return 25;
-        case TowerType::Sniper:
-            return 40;
-        case TowerType::Splash:
-            return 35;
-    }
-
-    return 25;
-}
-
-const char* getTowerTypeName(TowerType type) {
-    switch (type) {
-        case TowerType::Basic:
-            return "Basic";
-        case TowerType::Sniper:
-            return "Sniper";
-        case TowerType::Splash:
-            return "Splash";
-    }
-
-    return "Basic";
-}
 
 bool isOnPath(const GameData& data, int gridX, int gridY) {
     for (const auto& p : data.enemyPath) {
@@ -55,9 +30,8 @@ bool isBuildableTile(const GameData& data, int gridX, int gridY) {
     return data.tileMap[gridY][gridX] == TileType::Grass;
 }
 }
-
 void InputSystem::handleInput(SDL_Event& event, GameData& data) {
-    if (event.type == SDL_EVENT_MOUSE_MOTION) {
+    if (event.type == SDL_EVENT_MOUSE_MOTION && data.gameState == GameState::Playing) {
         int gridX = (int)(event.motion.x / TILE_SIZE);
         int gridY = (int)(event.motion.y / TILE_SIZE);
         data.hoveredGridX = gridX;
@@ -66,81 +40,56 @@ void InputSystem::handleInput(SDL_Event& event, GameData& data) {
     }
 
     if (event.type == SDL_EVENT_KEY_DOWN) {
-        if (data.gameOver && event.key.scancode == SDL_SCANCODE_R) {
+        // Mở/Đóng Pause Menu bằng phím ESC
+        if (event.key.scancode == SDL_SCANCODE_ESCAPE) {
+            if (data.gameState == GameState::Playing) {
+                data.gameState = GameState::Paused;
+            } else if (data.gameState == GameState::Paused) {
+                data.gameState = GameState::Playing;
+            }
+        }
+
+        if (data.gameState == GameState::GameOver && event.key.scancode == SDL_SCANCODE_R) {
             data.resetGame();
-            data.hoveredGridX = -1;
-            data.hoveredGridY = -1;
-            data.hoveredGridBuildable = false;
-            std::cout << "Restart game\n";
             return;
         }
 
-        if (event.key.scancode == SDL_SCANCODE_1) {
-            data.selectedTowerType = TowerType::Basic;
-            std::cout << "Chon tower: Basic\n";
-        } else if (event.key.scancode == SDL_SCANCODE_2) {
-            data.selectedTowerType = TowerType::Sniper;
-            std::cout << "Chon tower: Sniper\n";
-        } else if (event.key.scancode == SDL_SCANCODE_3) {
-            data.selectedTowerType = TowerType::Splash;
-            std::cout << "Chon tower: Splash\n";
+        if (data.gameState == GameState::Playing) {
+            if (event.key.scancode == SDL_SCANCODE_1) data.selectedTowerType = TowerType::Basic;
+            else if (event.key.scancode == SDL_SCANCODE_2) data.selectedTowerType = TowerType::Sniper;
+            else if (event.key.scancode == SDL_SCANCODE_3) data.selectedTowerType = TowerType::Splash;
         }
     }
 
-    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-        if (event.button.button == SDL_BUTTON_LEFT) {
-            if (data.gameOver) {
-                int mouseX = event.button.x;
-                int mouseY = event.button.y;
-                if (isInsideRect(mouseX, mouseY, RETRY_BUTTON_X, RETRY_BUTTON_Y, RETRY_BUTTON_WIDTH, RETRY_BUTTON_HEIGHT)) {
+    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_LEFT) {
+        float mouseX = event.button.x;
+        float mouseY = event.button.y;
+
+        if (data.gameState == GameState::MainMenu || data.gameState == GameState::Paused || data.gameState == GameState::GameOver) {
+            int btnX = (MAP_WIDTH * TILE_SIZE - MENU_BUTTON_WIDTH) / 2;
+            int btnY = (MAP_HEIGHT * TILE_SIZE - MENU_BUTTON_HEIGHT) / 2;
+
+            if (isInsideRect(mouseX, mouseY, btnX, btnY, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT)) {
+                if (data.gameState == GameState::MainMenu || data.gameState == GameState::GameOver) {
                     data.resetGame();
-                    data.hoveredGridX = -1;
-                    data.hoveredGridY = -1;
-                    data.hoveredGridBuildable = false;
-                    std::cout << "Restart game\n";
+                } else if (data.gameState == GameState::Paused) {
+                    data.gameState = GameState::Playing;
                 }
-                return;
             }
+            return;
+        }
+        int gridX = (int)(mouseX / TILE_SIZE);
+        int gridY = (int)(mouseY / TILE_SIZE);
+        
+        if (gridX < 0 || gridX >= MAP_WIDTH || gridY < 0 || gridY >= MAP_HEIGHT) return;
 
-            // Lấy tọa độ chuột
-            float mouseX = event.button.x;
-            float mouseY = event.button.y;
-
-            // Chuyển pixel thành tọa độ Grid
-            int gridX = (int)(mouseX / TILE_SIZE);
-            int gridY = (int)(mouseY / TILE_SIZE);
-            data.hoveredGridX = gridX;
-            data.hoveredGridY = gridY;
-            data.hoveredGridBuildable = gridX >= 0 && gridX < MAP_WIDTH && gridY >= 0 && gridY < MAP_HEIGHT && data.tileMap[gridY][gridX] == TileType::Grass;
-
-            if (gridX < 0 || gridX >= MAP_WIDTH || gridY < 0 || gridY >= MAP_HEIGHT) {
-                return;
-            }
-
-            int towerCost = getTowerCost(data.selectedTowerType);
-            if (data.gold < towerCost) {
-                std::cout << "Khong du vang de dat tower\n";
-                return;
-            }
-
-            if (!isBuildableTile(data, gridX, gridY)) {
-                std::cout << "Khong the dat tower len duong di\n";
-                return;
-            }
-
-            if (hasOperatorAt(data, gridX, gridY)) {
-                std::cout << "Da co tower o vi tri nay\n";
-                return;
-            }
-
-            // Đặt Operator mới vào danh sách
+       int towerCost = getTowerConfig(data.selectedTowerType).cost;
+        if (data.gold >= towerCost && isBuildableTile(data, gridX, gridY) && !hasOperatorAt(data, gridX, gridY)) {
             Operator newOp;
             newOp.pos = {gridX, gridY};
             newOp.type = data.selectedTowerType;
             data.operators.push_back(newOp);
             data.gold -= towerCost;
-            
-            std::cout << "Dat " << getTowerTypeName(newOp.type) << " tai o: (" << gridX << ", " << gridY << ")\n";
         }
     }
 }

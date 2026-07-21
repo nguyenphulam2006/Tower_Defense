@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-
+#include <SDL3/SDL.h>
 const int TILE_SIZE = 64;
 const int MAP_WIDTH = 15;
 const int MAP_HEIGHT = 5;
@@ -16,11 +16,23 @@ const int RETRY_BUTTON_WIDTH = 200;
 const int RETRY_BUTTON_HEIGHT = 56;
 const int RETRY_BUTTON_X = (MAP_WIDTH * TILE_SIZE - RETRY_BUTTON_WIDTH) / 2;
 const int RETRY_BUTTON_Y = (MAP_HEIGHT * TILE_SIZE - RETRY_BUTTON_HEIGHT) / 2 + 36;
+const int MENU_PANEL_WIDTH = 380;
+const int MENU_PANEL_HEIGHT = 280;
+const int MENU_BUTTON_WIDTH = 240;
+const int MENU_BUTTON_HEIGHT = 52;
+const int MENU_BUTTON_GAP = 14;
 
 enum class TowerType {
     Basic,
     Sniper,
     Splash
+};
+
+enum class GameState {
+    MainMenu,
+    Playing,
+    Paused,
+    GameOver
 };
 
 enum class TileType {
@@ -56,26 +68,47 @@ struct Projectile {
     TowerType sourceType = TowerType::Basic;
     bool active = true;
 };
-
+struct TowerConfig {
+    const char* name;
+    int cost;
+    float range;
+    float cooldown;
+    int damage;
+    float projectileSpeed;
+    float splashRadius;
+};
+inline TowerConfig getTowerConfig(TowerType type) {
+    switch (type) {
+        case TowerType::Basic:
+            return {"Basic", 25, TILE_SIZE * 2.5f, 0.75f, 1, 360.0f, 0.0f};
+        case TowerType::Sniper:
+            return {"Sniper", 40, TILE_SIZE * 4.0f, 1.35f, 3, 520.0f, 0.0f};
+        case TowerType::Splash:
+            return {"Splash", 35, TILE_SIZE * 2.0f, 1.0f, 1, 300.0f, (float)TILE_SIZE * 1.0f};
+    }
+    return {"Basic", 25, TILE_SIZE * 2.5f, 0.75f, 1, 360.0f, 0.0f};
+}
 class GameData {
 public:
     int baseHP = 3;
-    bool gameOver = false;
+    Uint64 lostHeartTime[3] = {0, 0, 0};
+    GameState gameState = GameState::MainMenu;
+    bool requestQuit = false;
     int hoveredGridX = -1;
     int hoveredGridY = -1;
     bool hoveredGridBuildable = false;
     std::vector<std::vector<TileType>> tileMap = {
-        {TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass},
-        {TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass},
-        {TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Path,  TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass},
-        {TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Base},
-        {TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass}
-    };
-    std::vector<Position> enemyPath = {
-        {0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}, 
-        {5, 1}, {5, 2}, {5, 3}, {6, 3}, {7, 3}, 
-        {8, 3}, {9, 3}, {10, 3}, {11, 3}, {12, 3}, {13, 3}
-    };
+    {TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass},
+    {TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Base},
+    {TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Path,  TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass},
+    {TileType::Grass, TileType::Grass, TileType::Grass, TileType::Path,  TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Path,  TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass},
+    {TileType::Grass, TileType::Grass, TileType::Grass, TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Path,  TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass, TileType::Grass}
+};
+ std::vector<Position> enemyPath = {
+    {0, 2}, {1, 2}, {2, 2}, {3, 2}, {3, 3}, {3, 4}, {4, 4}, {5, 4}, 
+    {6, 4}, {7, 4}, {8, 4}, {9, 4}, {9, 3}, {9, 2}, {9, 1}, {10, 1}, 
+    {11, 1}, {12, 1}, {13, 1}
+};
     std::vector<Enemy> enemies;
     std::vector<Operator> operators;
     std::vector<Projectile> projectiles;
@@ -90,12 +123,22 @@ public:
     float spawnTimer = 0.0f;
     float waveDelayTimer = 0.0f;
     bool waveInProgress = true;
-
-    int currentStep = 0;
-    bool enemyActive = true;
-    float moveTimer = 0.0f;
-
-    void resetGame() {
-        *this = GameData();
+ void resetGame() {
+        baseHP = 3;
+        gold = 100;
+        currentWave = 1;
+        enemiesPerWave = 5;
+        enemiesSpawnedThisWave = 0;
+        nextEnemyId = 1;
+        spawnTimer = 0.0f;
+        waveDelayTimer = 0.0f;
+        waveInProgress = true;
+        enemies.clear();
+        operators.clear();
+        projectiles.clear();
+        lostHeartTime[0] = 0;
+        lostHeartTime[1] = 0;
+        lostHeartTime[2] = 0;
+        this->gameState = GameState::Playing;
     }
 };
