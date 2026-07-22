@@ -4,27 +4,6 @@
 #include <cmath>
 
 namespace {
-struct TowerStats {
-    float range;
-    float cooldown;
-    int damage;
-    float projectileSpeed;
-    float splashRadius;
-};
-
-TowerStats getTowerStats(TowerType type) {
-    switch (type) {
-        case TowerType::Basic:
-            return {TILE_SIZE * 2.5f, 0.75f, 1, 360.0f, 0.0f};
-        case TowerType::Sniper:
-            return {TILE_SIZE * 4.0f, 1.35f, 3, 520.0f, 0.0f};
-        case TowerType::Splash:
-            return {TILE_SIZE * 2.0f, 1.0f, 1, 300.0f, (float)TILE_SIZE * 1.0f};
-    }
-
-    return {TILE_SIZE * 2.5f, 0.75f, 1, 360.0f, 0.0f};
-}
-
 float toWorldCenterX(int gridX) {
     return (float)gridX * TILE_SIZE + TILE_SIZE * 0.5f;
 }
@@ -108,7 +87,7 @@ if (data.gameState != GameState::Playing) {
 
     for (auto& tower : data.operators) {
         tower.fireTimer += deltaTime;
-        TowerStats stats = getTowerStats(tower.type);
+        TowerConfig stats = getTowerConfig(tower.type);
         if (tower.fireTimer < stats.cooldown) {
             continue;
         }
