@@ -1,0 +1,1 @@
+g++ src/main.cpp src/InputSystem.cpp src/LogicSystem.cpp src/RenderSystem.cpp -I include -L lib -o bin/TowerDefenseGame -lSDL3 -lSDL3_ttf

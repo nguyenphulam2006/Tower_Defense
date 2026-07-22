@@ -4,27 +4,6 @@
 #include <cmath>
 
 namespace {
-struct TowerStats {
-    float range;
-    float cooldown;
-    int damage;
-    float projectileSpeed;
-    float splashRadius;
-};
-
-TowerStats getTowerStats(TowerType type) {
-    switch (type) {
-        case TowerType::Basic:
-            return {TILE_SIZE * 2.5f, 0.75f, 1, 360.0f, 0.0f};
-        case TowerType::Sniper:
-            return {TILE_SIZE * 4.0f, 1.35f, 3, 520.0f, 0.0f};
-        case TowerType::Splash:
-            return {TILE_SIZE * 2.0f, 1.0f, 1, 300.0f, (float)TILE_SIZE * 1.0f};
-    }
-
-    return {TILE_SIZE * 2.5f, 0.75f, 1, 360.0f, 0.0f};
-}
-
 float toWorldCenterX(int gridX) {
     return (float)gridX * TILE_SIZE + TILE_SIZE * 0.5f;
 }
@@ -50,10 +29,13 @@ float distanceSquared(float x1, float y1, float x2, float y2) {
 }
 
 void LogicSystem::update(GameData& data, float deltaTime) {
-    if (data.gameOver) {
+if (data.gameState != GameState::Playing) {
         return;
     }
-
+    if (data.baseHP <= 0) {
+        data.gameState = GameState::GameOver;
+        return;
+    }
     if (data.waveInProgress) {
         data.spawnTimer += deltaTime;
         if (data.enemiesSpawnedThisWave < data.enemiesPerWave && data.spawnTimer >= SPAWN_INTERVAL) {
@@ -94,6 +76,9 @@ void LogicSystem::update(GameData& data, float deltaTime) {
                 enemy.currentStep++;
             } else {
                 data.baseHP--;
+                if (data.baseHP >= 0 && data.baseHP < 3) {
+                    data.lostHeartTime[data.baseHP] = SDL_GetTicks();
+                }
                 enemy.active = false;
                 std::cout << "Canh bao: Quai da lot vao Base! Mau hien tai: " << data.baseHP << std::endl;
             }
@@ -102,7 +87,7 @@ void LogicSystem::update(GameData& data, float deltaTime) {
 
     for (auto& tower : data.operators) {
         tower.fireTimer += deltaTime;
-        TowerStats stats = getTowerStats(tower.type);
+        TowerConfig stats = getTowerConfig(tower.type);
         if (tower.fireTimer < stats.cooldown) {
             continue;
         }
@@ -203,8 +188,4 @@ void LogicSystem::update(GameData& data, float deltaTime) {
             return !projectile.active;
         }),
         data.projectiles.end());
-
-    if (data.baseHP <= 0) {
-        data.gameOver = true;
-    }
 }

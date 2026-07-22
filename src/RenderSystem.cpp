@@ -27,6 +27,8 @@ struct TilePalette {
     ColorSwatch buttonRetry {200, 60, 60, 255};
     ColorSwatch buttonRetryHover {230, 90, 90, 255};
     ColorSwatch overlay {0, 0, 0, 160};
+    ColorSwatch water {40, 100, 200, 255};
+    ColorSwatch lava {213, 78, 13, 255};
 };
 
 TilePalette palette;
@@ -98,19 +100,6 @@ void setProjectileColor(SDL_Renderer* renderer, TowerType type) {
     }
 }
 
-const char* towerName(TowerType type) {
-    switch (type) {
-        case TowerType::Basic:
-            return "Basic";
-        case TowerType::Sniper:
-            return "Sniper";
-        case TowerType::Splash:
-            return "Splash";
-    }
-
-    return "Basic";
-}
-
 bool loadPaletteFromFile(TilePalette& palette) {
     std::ifstream file("assets/tileset.txt");
     if (!file.is_open()) {
@@ -142,6 +131,8 @@ bool loadPaletteFromFile(TilePalette& palette) {
         else if (key == "path") palette.path = color;
         else if (key == "base") palette.base = color;
         else if (key == "grid") palette.grid = color;
+        else if (key == "water") palette.water = color;
+        else if (key == "lava") palette.lava = color;
         else if (key == "enemy") palette.enemy = color;
         else if (key == "tower_basic") palette.towerBasic = color;
         else if (key == "tower_sniper") palette.towerSniper = color;
@@ -160,57 +151,109 @@ bool loadPaletteFromFile(TilePalette& palette) {
 
 bool RenderSystem::init() {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-    std::cout << "SDL_Init loi: " << SDL_GetError() << std::endl;
-    return false;
-}
-
-    window = SDL_CreateWindow("Arknights - SDL3 Modular", MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE, 0);
+        std::cout << "SDL_Init loi: " << SDL_GetError() << std::endl;
+        return false;
+    }
+    if (!TTF_Init()) {
+        std::cout << "TTF_Init loi: " << SDL_GetError() << std::endl;
+        return false;
+    }
+    window = SDL_CreateWindow("Tower Defense - SDL3 Modular", MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE, 0);
     if (!window) return false;
 
     renderer = SDL_CreateRenderer(window, nullptr);
     if (!renderer) return false;
-
+    font = TTF_OpenFont("assets/WebLetter.ttf", 24);
+    if (!font) {
+        font = TTF_OpenFont("../assets/WebLetter.ttf", 24);
+    }
+    if (!font) {
+        std::cout << "Khong load duoc font: " << SDL_GetError() << std::endl;
+    }
     loadPaletteFromFile(palette);
-
-    backgroundTexture = loadTexture(
+    grassTexture = loadTexture(
         renderer,
-        "assets/craftpix-net-305231-free-tower-defense-2d-vector-tileset/PNG/game_background_4/game_background_4.png",
-        "../assets/craftpix-net-305231-free-tower-defense-2d-vector-tileset/PNG/game_background_4/game_background_4.png"
+        "assets/grass.png",
+        "../assets/grass.png"
     );
 
-    for (int i = 0; i < 7; ++i) {
-        std::string index = std::to_string(i + 1);
-        std::string primary = "assets/craftpix-437811-free-monster-enemy-game-sprites/health_bar/health_bar-0" + index + ".png";
-        std::string fallback = "../assets/craftpix-437811-free-monster-enemy-game-sprites/health_bar/health_bar-0" + index + ".png";
-        healthBarTextures[i] = loadTexture(renderer, primary.c_str(), fallback.c_str());
-    }
-
+    brickTexture = loadTexture(
+        renderer,
+        "assets/brick.png",
+        "../assets/brick.png"
+    );
+    heartTexture = loadTexture(
+        renderer,
+        "assets/heart.png",
+        "../assets/heart.png"
+    );
+    heartAnimatedTexture = loadTexture(
+        renderer,
+        "assets/heart_animated_1.png",
+        "../assets/heart_animated_1.png"
+    );
+    waterTexture = loadTexture(
+        renderer,
+        "assets/water.png",
+        "../assets/water.png"
+    );
+    lavaTexture = loadTexture(
+        renderer,
+        "assets/lava.png",
+        "../assets/lava.png"
+    );
     return true;
 }
 
 void RenderSystem::draw(const GameData& data) {
     SDL_SetRenderDrawColor(renderer, 40, 40, 40, 255);
     SDL_RenderClear(renderer);
-
-    if (backgroundTexture != nullptr) {
-        SDL_FRect backgroundDst = {0.0f, 0.0f, (float)(MAP_WIDTH * TILE_SIZE), (float)(MAP_HEIGHT * TILE_SIZE)};
-        SDL_RenderTexture(renderer, backgroundTexture, nullptr, &backgroundDst);
-    }
-
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-
+    SDL_Color textColor = {255, 255, 255, 255};
     for (int y = 0; y < MAP_HEIGHT; ++y) {
         for (int x = 0; x < MAP_WIDTH; ++x) {
             TileType tile = data.tileMap[y][x];
+            SDL_FRect cell = { (float)x * TILE_SIZE, (float)y * TILE_SIZE, (float)TILE_SIZE, (float)TILE_SIZE };
             if (tile == TileType::Grass) {
-                setColor(renderer, {palette.grass.r, palette.grass.g, palette.grass.b, 90});
-            } else if (tile == TileType::Path) {
-                setColor(renderer, {palette.path.r, palette.path.g, palette.path.b, 150});
-            } else {
-                setColor(renderer, {palette.base.r, palette.base.g, palette.base.b, 180});
+                if (grassTexture != nullptr) {
+                    SDL_RenderTexture(renderer, grassTexture, nullptr, &cell);
+                } else {
+                    setColor(renderer, {palette.grass.r, palette.grass.g, palette.grass.b, 255}); // 255 thay vì 90 để không trong suốt
+                    SDL_RenderFillRect(renderer, &cell);
+                }
+            } else if (tile == TileType::Path || tile == TileType::Base) {
+                if (brickTexture != nullptr) {
+                    SDL_RenderTexture(renderer, brickTexture, nullptr, &cell);
+                } else {
+                    setColor(renderer, {palette.path.r, palette.path.g, palette.path.b, 255}); // 255 để không trong suốt
+                    SDL_RenderFillRect(renderer, &cell);
+                }
             }
-            SDL_FRect cell = { (float)x * TILE_SIZE, (float)y * TILE_SIZE, (float)TILE_SIZE - 1.0f, (float)TILE_SIZE - 1.0f };
-            SDL_RenderFillRect(renderer, &cell);
+            else if (tile == TileType::Water) {
+                if (waterTexture != nullptr) {
+                    SDL_RenderTexture(renderer, waterTexture, nullptr, &cell);
+                } else {
+                    setColor(renderer, palette.water);
+                    SDL_RenderFillRect(renderer, &cell);
+                }
+            }
+            else if (tile == TileType::Lava) {
+                // Luôn vẽ lớp cỏ làm nền ở dưới đề phòng ảnh Lava bị trong suốt
+                if (grassTexture != nullptr) {
+                    SDL_RenderTexture(renderer, grassTexture, nullptr, &cell);
+                } else {
+                    setColor(renderer, palette.grass);
+                    SDL_RenderFillRect(renderer, &cell);
+                }
+
+                // Vẽ ảnh Lava đè lên trên
+                if (lavaTexture != nullptr) {
+                    SDL_RenderTexture(renderer, lavaTexture, nullptr, &cell);
+                } else {
+                    setColor(renderer, palette.lava);
+                    SDL_RenderFillRect(renderer, &cell);
+                }
+            }
         }
     }
 
@@ -270,69 +313,148 @@ void RenderSystem::draw(const GameData& data) {
         SDL_FRect bullet = { projectile.x - 4.0f, projectile.y - 4.0f, 8.0f, 8.0f };
         SDL_RenderFillRect(renderer, &bullet);
     }
+    
+    int maxHearts = 3;
+    float heartSize = 40.0f;
+    float heartGap = 10.0f;
+    float startX = 16.0f;
+    float startY = 16.0f;
 
-    if (data.gameOver) {
+    for (int i = 0; i < maxHearts; ++i) {
+        SDL_FRect heartDst = { startX + i * (heartSize + heartGap), startY, heartSize, heartSize };
+        
+        if (i < data.baseHP) {
+            // Còn máu -> Vẽ trái tim bình thường
+            if (heartTexture != nullptr) {
+                SDL_RenderTexture(renderer, heartTexture, nullptr, &heartDst);
+            } else {
+                setColor(renderer, {255, 50, 50, 255});
+                SDL_RenderFillRect(renderer, &heartDst);
+            }
+        } else {
+            // Mất máu -> Sử dụng heart_animated_1.png (5 frames)
+            if (heartAnimatedTexture != nullptr) {
+                int totalFrames = 5; 
+                float texW, texH;
+                SDL_GetTextureSize(heartAnimatedTexture, &texW, &texH);
+                float frameW = texW / totalFrames;
+                
+                // Animation nhấp nháy hoặc hiển thị frame cuối
+             Uint64 timeSinceLost = SDL_GetTicks() - data.lostHeartTime[i];
+                int currentFrame = (int)(timeSinceLost / 150);
+                
+                if (currentFrame >= totalFrames) {
+                    currentFrame = totalFrames - 1; // Giữ nguyên ở frame cuối cùng (trái tim vỡ)
+                }
+                
+                SDL_FRect srcRect = { currentFrame * frameW, 0.0f, frameW, texH };
+                SDL_RenderTexture(renderer, heartAnimatedTexture, &srcRect, &heartDst);
+            } else {
+                setColor(renderer, {100, 100, 100, 255});
+                SDL_RenderFillRect(renderer, &heartDst);
+            }
+        }
+    }
+
+    if (data.gameState != GameState::Playing) {
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
         setColor(renderer, palette.overlay);
         SDL_FRect overlay = { 0.0f, 0.0f, (float)(MAP_WIDTH * TILE_SIZE), (float)(MAP_HEIGHT * TILE_SIZE) };
         SDL_RenderFillRect(renderer, &overlay);
-
-        bool hover = false;
-        float mouseX = 0.0f;
-        float mouseY = 0.0f;
+        int btnX = (MAP_WIDTH * TILE_SIZE - MENU_BUTTON_WIDTH) / 2;
+        int btnY = (MAP_HEIGHT * TILE_SIZE - MENU_BUTTON_HEIGHT) / 2;
+        
+        float mouseX = 0.0f, mouseY = 0.0f;
         SDL_GetMouseState(&mouseX, &mouseY);
-        hover = mouseX >= RETRY_BUTTON_X && mouseX < RETRY_BUTTON_X + RETRY_BUTTON_WIDTH && mouseY >= RETRY_BUTTON_Y && mouseY < RETRY_BUTTON_Y + RETRY_BUTTON_HEIGHT;
+        bool hover = mouseX >= btnX && mouseX < btnX + MENU_BUTTON_WIDTH && mouseY >= btnY && mouseY < btnY + MENU_BUTTON_HEIGHT;
 
         setColor(renderer, hover ? palette.buttonRetryHover : palette.buttonRetry);
-        SDL_FRect retryButton = { (float)RETRY_BUTTON_X, (float)RETRY_BUTTON_Y, (float)RETRY_BUTTON_WIDTH, (float)RETRY_BUTTON_HEIGHT };
-        SDL_RenderFillRect(renderer, &retryButton);
+        SDL_FRect menuButton = { (float)btnX, (float)btnY, (float)MENU_BUTTON_WIDTH, (float)MENU_BUTTON_HEIGHT };
+        SDL_RenderFillRect(renderer, &menuButton);
 
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_FRect retryBorder = { (float)RETRY_BUTTON_X, (float)RETRY_BUTTON_Y, (float)RETRY_BUTTON_WIDTH, (float)RETRY_BUTTON_HEIGHT };
-        SDL_RenderRect(renderer, &retryBorder);
-    }
+        SDL_RenderRect(renderer, &menuButton);
 
-    float hpRatio = data.baseHP / 3.0f;
-    if (hpRatio < 0.0f) {
-        hpRatio = 0.0f;
-    }
-    if (hpRatio > 1.0f) {
-        hpRatio = 1.0f;
-    }
+        std::string stateTitle = "Tower Defense | ";
+        if (data.gameState == GameState::MainMenu) stateTitle += "MAIN MENU - Click Button to Start";
+        else if (data.gameState == GameState::Paused) stateTitle += "PAUSED - Click Button or ESC to Resume";
+        else if (data.gameState == GameState::GameOver) stateTitle += "GAME OVER - Click Button to Retry";
+        renderText(stateTitle, (float)btnX - 120.0f, (float)btnY - 60.0f, textColor);
+         renderText("RETRY / START", (float)btnX + 30.0f, (float)btnY + 12.0f, textColor);
+        SDL_SetWindowTitle(window, stateTitle.c_str());
+    } else {
+        std::string waveText = "Wave: " + std::to_string(data.currentWave);
+            std::string hpText = "HP: " + std::to_string(data.baseHP);
+            std::string goldText = "Gold: " + std::to_string(data.gold);
+            std::string towerText = "Selected Tower: ";
+            
+            if (data.selectedTowerType == TowerType::Basic) towerText += "Basic ($25)";
+            else if (data.selectedTowerType == TowerType::Sniper) towerText += "Sniper ($40)";
+            else if (data.selectedTowerType == TowerType::Splash) towerText += "Splash ($35)";
 
-    int hpIndex = (int)(hpRatio * 6.0f + 0.5f);
-    if (hpIndex < 0) hpIndex = 0;
-    if (hpIndex > 6) hpIndex = 6;
-    SDL_Texture* hpTexture = healthBarTextures[hpIndex];
-    if (hpTexture != nullptr) {
-        SDL_FRect hpBarDst = { 16.0f, 16.0f, 280.0f, 56.0f };
-        SDL_RenderTexture(renderer, hpTexture, nullptr, &hpBarDst);
+            // Vẽ các dòng chữ lên góc trên hoặc dưới màn hình
+            renderText(waveText, 20.0f, MAP_HEIGHT * TILE_SIZE - 40.0f, {200, 255, 200, 255});
+            renderText(goldText, 150.0f, MAP_HEIGHT * TILE_SIZE - 40.0f, {255, 220, 50, 255});
+            renderText(towerText, 300.0f, MAP_HEIGHT * TILE_SIZE - 40.0f, textColor);
     }
-
-    std::string title = "Tower Defense | Wave: " + std::to_string(data.currentWave) +
-        " | HP: " + std::to_string(data.baseHP) +
-        " | Gold: " + std::to_string(data.gold) +
-        " | Selected: " + towerName(data.selectedTowerType) +
-        " | Towers: " + std::to_string((int)data.operators.size());
-    if (data.gameOver) {
-        title += " | GAME OVER - Click Retry or press R";
-    } else if (data.hoveredGridX >= 0 && data.hoveredGridY >= 0) {
-        title += " | Hover: (" + std::to_string(data.hoveredGridX) + "," + std::to_string(data.hoveredGridY) + ")";
-        title += data.hoveredGridBuildable ? " placeable" : " blocked";
-    }
-    SDL_SetWindowTitle(window, title.c_str());
-
     SDL_RenderPresent(renderer);
+}
+void RenderSystem::renderText(const std::string& text, float x, float y, SDL_Color color) {
+    if (!font) return; 
+
+    // Tạo một key duy nhất dựa trên nội dung text và màu sắc
+    std::string cacheKey = text + "_" + std::to_string(color.r) + std::to_string(color.g) + std::to_string(color.b);
+
+    // Nếu texture chưa tồn tại trong cache, tiến hành tạo mới và lưu lại
+    if (textCache.find(cacheKey) == textCache.end()) {
+        SDL_Surface* textSurface = TTF_RenderText_Blended(font, text.c_str(), text.length(), color);
+        if (textSurface) {
+            textCache[cacheKey] = SDL_CreateTextureFromSurface(renderer, textSurface);
+            SDL_DestroySurface(textSurface);
+        }
+    }
+
+    // Lấy texture từ cache ra để vẽ
+    SDL_Texture* textTexture = textCache[cacheKey];
+    if (textTexture) {
+        float texW, texH;
+        SDL_GetTextureSize(textTexture, &texW, &texH); // Lấy kích thước texture trong SDL3
+        SDL_FRect renderQuad = { x, y, texW, texH };
+        SDL_RenderTexture(renderer, textTexture, nullptr, &renderQuad);
+    }
 }
 
 void RenderSystem::cleanup() {
-    for (SDL_Texture*& texture : healthBarTextures) {
-        SDL_DestroyTexture(texture);
-        texture = nullptr;
+    for (auto& pair : textCache) {
+        SDL_DestroyTexture(pair.second);
     }
+    textCache.clear();
 
-    SDL_DestroyTexture(backgroundTexture);
-    backgroundTexture = nullptr;
+    if (heartAnimatedTexture != nullptr) {
+        SDL_DestroyTexture(heartAnimatedTexture);
+        heartAnimatedTexture = nullptr;
+    }
+    if (heartTexture != nullptr) {
+        SDL_DestroyTexture(heartTexture);
+        heartTexture = nullptr;
+    }
+    if (waterTexture != nullptr) {
+        SDL_DestroyTexture(waterTexture);
+        waterTexture = nullptr;
+    }
+    if (lavaTexture != nullptr) {
+        SDL_DestroyTexture(lavaTexture);
+        lavaTexture = nullptr;
+    }
+    if (grassTexture != nullptr) {
+        SDL_DestroyTexture(grassTexture);
+        grassTexture = nullptr;
+    }
+    if (brickTexture != nullptr) {
+        SDL_DestroyTexture(brickTexture);
+        brickTexture = nullptr;
+    }
+    TTF_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
