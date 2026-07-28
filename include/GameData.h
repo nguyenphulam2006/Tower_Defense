@@ -28,13 +28,12 @@ const int MENU_BUTTON_HEIGHT = 52;
 const int MENU_BUTTON_GAP = 14;
 
 enum class TowerType { Basic, Sniper, Splash };
-enum class GameState { MainMenu, Playing, Paused, GameOver };
-// Khớp thứ tự Enum với các con số: 0, 1, 2, 3, 4
+enum class GameState { MainMenu, LevelSelect, Settings, Playing, Paused, GameOver };
 enum class TileType { Grass = 0, Path = 1, Base = 2, Water = 3, Lava = 4 };
 
 struct Position { int x, y; };
 struct Operator { Position pos; TowerType type = TowerType::Basic; float fireTimer = 0.0f; };
-struct Enemy { int id = 0; int currentStep = 0; int hp = 3; float moveTimer = 0.0f; bool active = true; };
+struct Enemy { int id = 0; int currentStep = 0; int hp = 3; int maxHp = 3;; float moveTimer = 0.0f; bool active = true; };
 struct Projectile { float x = 0.0f; float y = 0.0f; int targetEnemyId = -1; int damage = 1; float speed = 360.0f; float splashRadius = 0.0f; TowerType sourceType = TowerType::Basic; bool active = true; };
 struct TowerConfig { const char* name; int cost; float range; float cooldown; int damage; float projectileSpeed; float splashRadius; };
 
@@ -56,6 +55,9 @@ public:
     int hoveredGridY = -1;
     bool hoveredGridBuildable = false;
     int maxTowers = 15; 
+    int currentLevel = 1;
+    bool soundEnabled = true;
+    bool showGrid = false;
     std::vector<std::vector<int>> rawMap;
     std::vector<std::vector<TileType>> tileMap;
     std::vector<Position> enemyPath;
@@ -182,8 +184,12 @@ void loadMapFromFile(const std::string& filepath) {
             if (!moved) break;
         }
     }
+void resetGame(int levelToLoad = -1) {
+        if (levelToLoad != -1) {
+            currentLevel = levelToLoad;
+        }
+        loadMapFromFile("assets/map" + std::to_string(currentLevel) + ".txt");
 
-    void resetGame() {
         baseHP = 3;
         gold = 100;
         currentWave = 1;
@@ -199,6 +205,7 @@ void loadMapFromFile(const std::string& filepath) {
         lostHeartTime[0] = 0;
         lostHeartTime[1] = 0;
         lostHeartTime[2] = 0;
+        
         this->gameState = GameState::Playing;
     }
 };

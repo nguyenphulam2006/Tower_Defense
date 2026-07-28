@@ -44,6 +44,7 @@ if (data.gameState != GameState::Playing) {
             enemy.id = data.nextEnemyId++;
             enemy.currentStep = 0;
             enemy.hp = 3 + (data.currentWave - 1);
+            enemy.maxHp = enemy.hp;
             data.enemies.push_back(enemy);
             data.enemiesSpawnedThisWave++;
         }
