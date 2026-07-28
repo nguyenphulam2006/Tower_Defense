@@ -173,8 +173,8 @@ bool RenderSystem::init() {
     loadPaletteFromFile(palette);
     grassTexture = loadTexture(
         renderer,
-        "assets/grass.png",
-        "../assets/grass.png"
+        "assets/spr_grass_02.png",
+        "../assets/spr_grass_02.png"
     );
 
     brickTexture = loadTexture(
@@ -201,6 +201,37 @@ bool RenderSystem::init() {
         renderer,
         "assets/lava.png",
         "../assets/lava.png"
+    );
+    enemyAnimatedTexture = loadTexture(
+        renderer,
+        "assets/spr_normal_slime.png",
+        "../assets/spr_normal_slime.png"
+    );
+    towerArcherTexture = loadTexture(
+        renderer,
+        "assets/spr_tower_archer.png",
+        "../assets/spr_tower_archer.png"
+    );
+    
+    arrowProjectileTexture = loadTexture(
+        renderer,
+        "assets/spr_tower_archer_projectile.png",
+        "../assets/spr_tower_archer_projectile.png"
+    );
+    bgMainMenuTexture = loadTexture(
+        renderer,
+        "assets/bg_main_menu.png",
+        "../assets/bg_main_menu.png"
+    );
+    panelTexture = loadTexture(
+        renderer,
+        "assets/panel.png",
+        "../assets/panel.png"
+    );
+    buttonGreenTexture = loadTexture(
+        renderer,
+        "assets/button_green.png",
+        "../assets/button_green.png"
     );
     return true;
 }
@@ -238,15 +269,6 @@ void RenderSystem::draw(const GameData& data) {
                 }
             }
             else if (tile == TileType::Lava) {
-                // Luôn vẽ lớp cỏ làm nền ở dưới đề phòng ảnh Lava bị trong suốt
-                if (grassTexture != nullptr) {
-                    SDL_RenderTexture(renderer, grassTexture, nullptr, &cell);
-                } else {
-                    setColor(renderer, palette.grass);
-                    SDL_RenderFillRect(renderer, &cell);
-                }
-
-                // Vẽ ảnh Lava đè lên trên
                 if (lavaTexture != nullptr) {
                     SDL_RenderTexture(renderer, lavaTexture, nullptr, &cell);
                 } else {
@@ -274,44 +296,82 @@ void RenderSystem::draw(const GameData& data) {
         }
 
         Position enemyPos = data.enemyPath[enemy.currentStep];
-        setColor(renderer, palette.enemy);
-        SDL_FRect enemyRect = { 
-            (float)enemyPos.x * TILE_SIZE + 16, 
-            (float)enemyPos.y * TILE_SIZE + 16, 
-            32.0f, 32.0f 
-        };
-        SDL_RenderFillRect(renderer, &enemyRect);
+ if (enemyAnimatedTexture != nullptr) {
+            float texW, texH;
+            SDL_GetTextureSize(enemyAnimatedTexture, &texW, &texH);
+            int totalFrames = 4;
+            float frameW = texW / totalFrames;
+            Uint32 currentTime = SDL_GetTicks();
+            int currentFrame = (currentTime / 100) % totalFrames;
+            SDL_FRect srcRect = { currentFrame * frameW, 0.0f, frameW, texH };    
+            SDL_FRect enemyDst = { 
+                (float)enemyPos.x * TILE_SIZE + 16, 
+                (float)enemyPos.y * TILE_SIZE + 16, 
+                32.0f, 32.0f 
+            };
+            
+            // Vẽ animation
+            SDL_RenderTexture(renderer, enemyAnimatedTexture, &srcRect, &enemyDst);
+        } else {
+            setColor(renderer, palette.enemy);
+            SDL_FRect enemyRect = { 
+                (float)enemyPos.x * TILE_SIZE + 16, 
+                (float)enemyPos.y * TILE_SIZE + 16, 
+                32.0f, 32.0f 
+            };
+            SDL_RenderFillRect(renderer, &enemyRect);
+        }
+        float hpPercent = std::max(0.0f, (float)enemy.hp / enemy.maxHp);
+        SDL_FRect bgBar = { (float)enemyPos.x * TILE_SIZE + 12, (float)enemyPos.y * TILE_SIZE + 48, 40.0f, 6.0f };
+        SDL_FRect fgBar = { (float)enemyPos.x * TILE_SIZE + 12, (float)enemyPos.y * TILE_SIZE + 48, 40.0f * hpPercent, 6.0f };
+        
+        // Nền thanh máu (màu đỏ)
+        SDL_SetRenderDrawColor(renderer, 200, 50, 50, 255);
+        SDL_RenderFillRect(renderer, &bgBar);
+        // Phần máu còn lại (màu xanh lá)
+        SDL_SetRenderDrawColor(renderer, 50, 200, 50, 255);
+        SDL_RenderFillRect(renderer, &fgBar);
+        // Viền thanh máu (màu đen)
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderRect(renderer, &bgBar);
     }
 
-    // Vẽ Operators (Màu xanh lá)
+    // Vẽ Operators
     for (const auto& op : data.operators) {
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
-        SDL_FRect opBorder = { 
-            (float)op.pos.x * TILE_SIZE + 4, 
-            (float)op.pos.y * TILE_SIZE + 4, 
-            56.0f, 56.0f 
+       SDL_FRect destRect = { 
+            (float)op.pos.x * TILE_SIZE, 
+            (float)op.pos.y * TILE_SIZE, 
+            (float)TILE_SIZE, (float)TILE_SIZE 
         };
-        SDL_RenderRect(renderer, &opBorder);
+        if (op.type == TowerType::Basic && towerArcherTexture != nullptr) {
+            SDL_RenderTexture(renderer, towerArcherTexture, nullptr, &destRect);
+        } else {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
+            SDL_FRect opBorder = { destRect.x + 4, destRect.y + 4, 56.0f, 56.0f };
+            SDL_RenderRect(renderer, &opBorder);
 
-        if (op.type == TowerType::Basic) setColor(renderer, palette.towerBasic);
-        else if (op.type == TowerType::Sniper) setColor(renderer, palette.towerSniper);
-        else setColor(renderer, palette.towerSplash);
-        // Vẽ hình vuông nhỏ hơn ô một chút
-        SDL_FRect opRect = { 
-            (float)op.pos.x * TILE_SIZE + 8, 
-            (float)op.pos.y * TILE_SIZE + 8, 
-            48.0f, 48.0f 
-        };
-        SDL_RenderFillRect(renderer, &opRect);
+            if (op.type == TowerType::Basic) setColor(renderer, palette.towerBasic);
+            else if (op.type == TowerType::Sniper) setColor(renderer, palette.towerSniper);
+            else setColor(renderer, palette.towerSplash);
+            
+            SDL_FRect opRect = { destRect.x + 8, destRect.y + 8, 48.0f, 48.0f };
+            SDL_RenderFillRect(renderer, &opRect);
+        }
     }
 
     // Vẽ đạn
     for (const auto& projectile : data.projectiles) {
-        if (projectile.sourceType == TowerType::Basic) setColor(renderer, palette.projectileBasic);
-        else if (projectile.sourceType == TowerType::Sniper) setColor(renderer, palette.projectileSniper);
-        else setColor(renderer, palette.projectileSplash);
-        SDL_FRect bullet = { projectile.x - 4.0f, projectile.y - 4.0f, 8.0f, 8.0f };
-        SDL_RenderFillRect(renderer, &bullet);
+ if (projectile.sourceType == TowerType::Basic && arrowProjectileTexture != nullptr) {
+            SDL_FRect bulletDst = { projectile.x - 8.0f, projectile.y - 8.0f, 16.0f, 16.0f };
+            SDL_RenderTexture(renderer, arrowProjectileTexture, nullptr, &bulletDst);
+        } else {
+            if (projectile.sourceType == TowerType::Basic) setColor(renderer, palette.projectileBasic);
+            else if (projectile.sourceType == TowerType::Sniper) setColor(renderer, palette.projectileSniper);
+            else setColor(renderer, palette.projectileSplash);
+            
+            SDL_FRect bullet = { projectile.x - 4.0f, projectile.y - 4.0f, 8.0f, 8.0f };
+            SDL_RenderFillRect(renderer, &bullet);
+        }
     }
     
     int maxHearts = 3;
@@ -376,7 +436,79 @@ void RenderSystem::draw(const GameData& data) {
         SDL_RenderRect(renderer, &menuButton);
 
         std::string stateTitle = "Tower Defense | ";
-        if (data.gameState == GameState::MainMenu) stateTitle += "MAIN MENU - Click Button to Start";
+     if (data.gameState == GameState::MainMenu) {
+            // 1. Vẽ hình nền (Nếu không có ảnh, dùng màu xanh dương chuyển sắc gradient giả)
+            if (bgMainMenuTexture) {
+                SDL_FRect bgRect = {0, 0, (float)(MAP_WIDTH * TILE_SIZE), (float)(MAP_HEIGHT * TILE_SIZE)};
+                SDL_RenderTexture(renderer, bgMainMenuTexture, nullptr, &bgRect);
+            } else {
+                setColor(renderer, {100, 180, 255, 255}); // Bầu trời xanh
+                SDL_RenderFillRect(renderer, &overlay); // overlay bao phủ toàn màn hình
+            }
+
+            // 2. Vẽ Tiêu đề Game
+            renderText("Tower defense", 250.0f, 50.0f, {255, 255, 255, 255});
+            renderText("Main menu", 320.0f, 90.0f, {255, 255, 255, 255});
+
+            // Định nghĩa kích thước và vị trí của Panel (Bảng menu)
+            float panelW = 320.0f;
+            float panelH = 380.0f;
+            float panelX = (MAP_WIDTH * TILE_SIZE) - panelW - 100.0f; // Nằm lệch phải như trong ảnh
+            float panelY = 200.0f;
+
+            // 3. Vẽ Panel bằng đá
+            SDL_FRect panelRect = {panelX, panelY, panelW, panelH};
+            if (panelTexture) {
+                SDL_RenderTexture(renderer, panelTexture, nullptr, &panelRect);
+            } else {
+                setColor(renderer, {140, 145, 150, 255}); // Màu xám đá
+                SDL_RenderFillRect(renderer, &panelRect);
+                setColor(renderer, {80, 85, 90, 255}); // Viền tối màu
+                SDL_RenderRect(renderer, &panelRect);
+            }
+
+            // Tiêu đề nhỏ trên Panel
+            renderText("Main menu", panelX + 90.0f, panelY + 15.0f, {255, 255, 255, 255});
+
+            // Thông số các nút bấm
+            int btnW = 200, btnH = 60, gap = 30;
+            float startBtnY = panelY + 80.0f;
+
+            // Hàm lambda nội bộ để vẽ nút giống phong cách trong ảnh
+            auto drawStyledButton = [&](int index, const std::string& text) {
+                float btnX = panelX + (panelW - btnW) / 2.0f;
+                float btnY = startBtnY + index * (btnH + gap);
+                
+                // Hiệu ứng Hover (Di chuột vào thì sáng lên)
+                bool hover = mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH;
+
+                SDL_FRect btnRect = {btnX, btnY, (float)btnW, (float)btnH};
+
+                if (buttonGreenTexture) {
+                    // Nếu có ảnh nút, có thể làm sáng ảnh khi hover bằng cách chỉnh color mod
+                    if (hover) SDL_SetTextureColorMod(buttonGreenTexture, 200, 255, 200);
+                    else SDL_SetTextureColorMod(buttonGreenTexture, 255, 255, 255);
+                    SDL_RenderTexture(renderer, buttonGreenTexture, nullptr, &btnRect);
+                } else {
+                    // Fallback: Vẽ màu xanh lá giống trong ảnh
+                    setColor(renderer, hover ? ColorSwatch{150, 220, 50, 255} : ColorSwatch{120, 200, 40, 255});
+                    SDL_RenderFillRect(renderer, &btnRect);
+                    // Viền đen/đậm cho nút
+                    setColor(renderer, {20, 50, 10, 255});
+                    SDL_RenderRect(renderer, &btnRect);
+                }
+
+                // Bóng chữ (Shadow text) để chữ nổi lên giống ảnh
+                renderText(text, btnX + btnW / 2.0f - text.length() * 6.0f + 2.0f, btnY + 18.0f, {0, 0, 0, 255});
+                // Chữ chính (Trắng)
+                renderText(text, btnX + btnW / 2.0f - text.length() * 6.0f, btnY + 16.0f, {255, 255, 255, 255});
+            };
+
+            // 4. Vẽ 3 nút bấm tương ứng
+            drawStyledButton(0, "Play");
+            drawStyledButton(1, "Options");
+            drawStyledButton(2, "Quit");
+        }
         else if (data.gameState == GameState::Paused) stateTitle += "PAUSED - Click Button or ESC to Resume";
         else if (data.gameState == GameState::GameOver) stateTitle += "GAME OVER - Click Button to Retry";
         renderText(stateTitle, (float)btnX - 120.0f, (float)btnY - 60.0f, textColor);
@@ -454,6 +586,21 @@ void RenderSystem::cleanup() {
         SDL_DestroyTexture(brickTexture);
         brickTexture = nullptr;
     }
+    if (enemyAnimatedTexture != nullptr) {
+        SDL_DestroyTexture(enemyAnimatedTexture);
+        enemyAnimatedTexture = nullptr;
+    }
+    if (towerArcherTexture != nullptr) {
+        SDL_DestroyTexture(towerArcherTexture);
+        towerArcherTexture = nullptr;
+    }
+    if (arrowProjectileTexture != nullptr) {
+        SDL_DestroyTexture(arrowProjectileTexture);
+        arrowProjectileTexture = nullptr;
+    }
+    if (bgMainMenuTexture) SDL_DestroyTexture(bgMainMenuTexture);
+    if (panelTexture) SDL_DestroyTexture(panelTexture);
+    if (buttonGreenTexture) SDL_DestroyTexture(buttonGreenTexture);
     TTF_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
