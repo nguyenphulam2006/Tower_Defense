@@ -22,7 +22,7 @@ private:
     SDL_Texture* buttonGreenTexture = nullptr;
     TTF_Font* font = nullptr;
     std::unordered_map<std::string, SDL_Texture*> textCache;
-    void renderText(const std::string& text, float x, float y, SDL_Color color);
+    void renderText(const std::string& text, float x, float y, SDL_Color color, bool isStatic = false);
 public:
     bool init();
     void draw(const GameData& data);

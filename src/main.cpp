@@ -4,6 +4,7 @@
 #include "LogicSystem.h"
 #include "RenderSystem.h"
 #include "InputSystem.h"
+#include "MapSystem.h"
 
 int main(int argc, char* argv[]) {
     GameData data;
@@ -12,6 +13,7 @@ int main(int argc, char* argv[]) {
     InputSystem input;
 
     if (!render.init()) return -1;
+    MapSystem::initGame(data);
 
     bool isRunning = true;
     SDL_Event event;
