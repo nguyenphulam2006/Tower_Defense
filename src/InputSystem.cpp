@@ -1,6 +1,6 @@
 #include "InputSystem.h"
 #include <iostream>
-
+#include "MapSystem.h"
 namespace {
 
 bool isOnPath(const GameData& data, int gridX, int gridY) {
@@ -50,7 +50,7 @@ void InputSystem::handleInput(SDL_Event& event, GameData& data) {
         }
 
         if (data.gameState == GameState::GameOver && event.key.scancode == SDL_SCANCODE_R) {
-            data.resetGame();
+            MapSystem::resetGame(data);
             return;
         }
 
@@ -83,21 +83,6 @@ void InputSystem::handleInput(SDL_Event& event, GameData& data) {
             return;
         }
 
-        // 2. XỬ LÝ CLICK: CHỌN MÀN CHƠI
-        if (data.gameState == GameState::LevelSelect) {
-            int centerX = (MAP_WIDTH * TILE_SIZE) / 2;
-            int centerY = (MAP_HEIGHT * TILE_SIZE) / 2;
-            int btnW = 240, btnH = 50, gap = 20;
-
-            if (isInsideRect(mouseX, mouseY, centerX - btnW/2, centerY - 60, btnW, btnH)) 
-                data.resetGame(1); // Chơi Level 1
-            else if (isInsideRect(mouseX, mouseY, centerX - btnW/2, centerY - 60 + btnH + gap, btnW, btnH)) 
-                data.resetGame(2); // Chơi Level 2
-            else if (isInsideRect(mouseX, mouseY, centerX - btnW/2, centerY - 60 + (btnH + gap)*2, btnW, btnH)) 
-                data.gameState = GameState::MainMenu; // Nút BACK
-            return;
-        }
-
         // 3. XỬ LÝ CLICK: CÀI ĐẶT (SETTINGS)
         if (data.gameState == GameState::Settings) {
             int centerX = (MAP_WIDTH * TILE_SIZE) / 2;
@@ -118,7 +103,7 @@ void InputSystem::handleInput(SDL_Event& event, GameData& data) {
             int btnW = 240, btnH = 50;
 
             if (isInsideRect(mouseX, mouseY, centerX - btnW/2, centerY, btnW, btnH)) {
-                if (data.gameState == GameState::GameOver) data.resetGame(data.currentLevel); 
+                if (data.gameState == GameState::GameOver) MapSystem::resetGame(data, data.currentLevel); 
                 else if (data.gameState == GameState::Paused) data.gameState = GameState::Playing; 
             }
             return;
@@ -129,12 +114,16 @@ void InputSystem::handleInput(SDL_Event& event, GameData& data) {
         if (gridX < 0 || gridX >= MAP_WIDTH || gridY < 0 || gridY >= MAP_HEIGHT) return;
 
        int towerCost = getTowerConfig(data.selectedTowerType).cost;
-        if (data.gold >= towerCost && isBuildableTile(data, gridX, gridY) && !hasOperatorAt(data, gridX, gridY)) {
-            Operator newOp;
-            newOp.pos = {gridX, gridY};
-            newOp.type = data.selectedTowerType;
-            data.operators.push_back(newOp);
-            data.gold -= towerCost;
+ if (data.gold >= towerCost && isBuildableTile(data, gridX, gridY) && !hasOperatorAt(data, gridX, gridY)) {
+            if (data.operators.size() < data.maxTowers) {
+                Operator newOp;
+                newOp.pos = {gridX, gridY};
+                newOp.type = data.selectedTowerType;
+                data.operators.push_back(newOp);
+                data.gold -= towerCost;
+            } else {
+                std::cout << "Da dat gioi han thap (" << data.maxTowers << ")!" << std::endl;
+            }
         }
     }
 }
