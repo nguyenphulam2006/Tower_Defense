@@ -27,23 +27,46 @@ const int MENU_BUTTON_WIDTH = 240;
 const int MENU_BUTTON_HEIGHT = 52;
 const int MENU_BUTTON_GAP = 14;
 
-enum class TowerType { Basic, Sniper, Splash };
+enum class TowerType { Basic, Frost, Blocker };
 enum class GameState { MainMenu, LevelSelect, Settings, Playing, Paused, GameOver };
 enum class TileType { Grass = 0, Path = 1, Base = 2, Water = 3, Lava = 4 };
 
 struct Position { int x, y; };
-struct Operator { Position pos; TowerType type = TowerType::Basic; float fireTimer = 0.0f; };
-struct Enemy { int id = 0; int currentStep = 0; int hp = 3; int maxHp = 3;; float moveTimer = 0.0f; bool active = true; };
-struct Projectile { float x = 0.0f; float y = 0.0f; int targetEnemyId = -1; int damage = 1; float speed = 360.0f; float splashRadius = 0.0f; TowerType sourceType = TowerType::Basic; bool active = true; };
-struct TowerConfig { const char* name; int cost; float range; float cooldown; int damage; float projectileSpeed; float splashRadius; };
-
+struct Operator { 
+    Position pos; 
+    TowerType type = TowerType::Basic; 
+    float fireTimer = 0.0f; 
+    int hp = 5; // THÊM: Máu cho tháp chặn đường
+    bool active = true; // THÊM: Trạng thái tồn tại của tháp
+};
+struct Enemy { 
+    int id = 0; int currentStep = 0; int hp = 5; int maxHp = 5; 
+    float moveTimer = 0.0f; 
+    bool active = true; 
+    float slowTimer = 0.0f; // THÊM: Thời gian bị làm chậm
+    float attackTimer = 0.0f; // THÊM: Cooldown đánh tháp chặn
+};
+struct Projectile { 
+    float x = 0.0f; float y = 0.0f; int targetEnemyId = -1; 
+    int damage = 1; float speed = 360.0f; float splashRadius = 0.0f; 
+    TowerType sourceType = TowerType::Basic; bool active = true; 
+    bool isFrost = false; 
+};
+struct TowerConfig { 
+    const char* name; int cost; float range; float cooldown; 
+    int damage; float projectileSpeed; float splashRadius; 
+    bool isFrost; int maxHp; 
+};
 inline TowerConfig getTowerConfig(TowerType type) {
     switch (type) {
-        case TowerType::Basic: return {"Basic", 25, TILE_SIZE * 2.5f, 0.75f, 1, 360.0f, 0.0f};
-        case TowerType::Sniper: return {"Sniper", 40, TILE_SIZE * 4.0f, 1.35f, 3, 520.0f, 0.0f};
-        case TowerType::Splash: return {"Splash", 35, TILE_SIZE * 2.0f, 1.0f, 1, 300.0f, (float)TILE_SIZE * 1.0f};
+        // Tháp thường: Bắn đạn bình thường
+        case TowerType::Basic: return {"Basic", 25, TILE_SIZE * 2.5f, 0.75f, 1, 360.0f, 0.0f, false, 1};
+        // Tháp băng: Sát thương thấp, làm chậm địch
+        case TowerType::Frost: return {"Frost", 35, TILE_SIZE * 2.5f, 1.2f, 1, 300.0f, 0.0f, true, 1};
+        // Tháp chặn: Đặt trên đường đi, chặn quái, gây sát thương cận chiến, máu trâu
+        case TowerType::Blocker: return {"Blocker", 20, TILE_SIZE * 0.5f, 1.0f, 1, 0.0f, 0.0f, false, 5};
     }
-    return {"Basic", 25, TILE_SIZE * 2.5f, 0.75f, 1, 360.0f, 0.0f};
+    return {"Basic", 25, TILE_SIZE * 2.5f, 0.75f, 1, 360.0f, 0.0f, false, 1};
 }
 class GameData {
 public:
@@ -54,10 +77,12 @@ public:
     int hoveredGridX = -1;
     int hoveredGridY = -1;
     bool hoveredGridBuildable = false;
-    int maxTowers = 15; 
+    
+    int maxTowers = 5;
     int currentLevel = 1;
     bool soundEnabled = true;
     bool showGrid = false;
+    
     std::vector<std::vector<int>> rawMap;
     std::vector<std::vector<TileType>> tileMap;
     std::vector<Position> enemyPath;
