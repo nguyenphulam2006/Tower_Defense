@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 namespace {
 struct ColorSwatch {
@@ -19,11 +20,11 @@ struct TilePalette {
     ColorSwatch grid {55, 55, 55, 255};
     ColorSwatch enemy {255, 50, 50, 255};
     ColorSwatch towerBasic {50, 255, 50, 255};
-    ColorSwatch towerSniper {255, 180, 40, 255};
-    ColorSwatch towerSplash {180, 80, 255, 255};
+    ColorSwatch towerFrost {100, 200, 255, 255};    
+    ColorSwatch towerBlocker {150, 100, 50, 255};  
     ColorSwatch projectileBasic {255, 220, 0, 255};
-    ColorSwatch projectileSniper {255, 255, 255, 255};
-    ColorSwatch projectileSplash {180, 80, 255, 255};
+    ColorSwatch projectileFrost {200, 255, 255, 255}; 
+    ColorSwatch projectileBlocker {150, 100, 50, 255}; 
     ColorSwatch buttonRetry {200, 60, 60, 255};
     ColorSwatch buttonRetryHover {230, 90, 90, 255};
     ColorSwatch overlay {0, 0, 0, 160};
@@ -33,71 +34,8 @@ struct TilePalette {
 
 TilePalette palette;
 
-ColorSwatch parseColorLine(const std::string& line) {
-    std::istringstream stream(line);
-    std::string key;
-    int r = 0;
-    int g = 0;
-    int b = 0;
-    int a = 255;
-
-    if (!(stream >> key >> r >> g >> b >> a)) {
-        return {};
-    }
-
-    return {static_cast<Uint8>(r), static_cast<Uint8>(g), static_cast<Uint8>(b), static_cast<Uint8>(a)};
-}
-
 void setColor(SDL_Renderer* renderer, const ColorSwatch& color) {
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-}
-
-SDL_Texture* loadTexture(SDL_Renderer* renderer, const char* primaryPath, const char* fallbackPath = nullptr) {
-    SDL_Surface* surface = SDL_LoadPNG(primaryPath);
-    if (!surface && fallbackPath != nullptr) {
-        surface = SDL_LoadPNG(fallbackPath);
-    }
-
-    if (!surface) {
-        std::cout << "Khong load duoc asset PNG: " << primaryPath << " | " << SDL_GetError() << std::endl;
-        return nullptr;
-    }
-
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_DestroySurface(surface);
-    if (!texture) {
-        std::cout << "Khong tao duoc texture: " << primaryPath << " | " << SDL_GetError() << std::endl;
-    }
-
-    return texture;
-}
-
-void setTowerColor(SDL_Renderer* renderer, TowerType type) {
-    switch (type) {
-        case TowerType::Basic:
-            SDL_SetRenderDrawColor(renderer, 50, 255, 50, 255);
-            break;
-        case TowerType::Sniper:
-            SDL_SetRenderDrawColor(renderer, 255, 180, 40, 255);
-            break;
-        case TowerType::Splash:
-            SDL_SetRenderDrawColor(renderer, 180, 80, 255, 255);
-            break;
-    }
-}
-
-void setProjectileColor(SDL_Renderer* renderer, TowerType type) {
-    switch (type) {
-        case TowerType::Basic:
-            SDL_SetRenderDrawColor(renderer, 255, 220, 0, 255);
-            break;
-        case TowerType::Sniper:
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            break;
-        case TowerType::Splash:
-            SDL_SetRenderDrawColor(renderer, 180, 80, 255, 255);
-            break;
-    }
 }
 
 bool loadPaletteFromFile(TilePalette& palette) {
@@ -118,10 +56,7 @@ bool loadPaletteFromFile(TilePalette& palette) {
 
         std::istringstream stream(line);
         std::string key;
-        int r = 0;
-        int g = 0;
-        int b = 0;
-        int a = 255;
+        int r = 0, g = 0, b = 0, a = 255;
         if (!(stream >> key >> r >> g >> b >> a)) {
             continue;
         }
@@ -135,11 +70,11 @@ bool loadPaletteFromFile(TilePalette& palette) {
         else if (key == "lava") palette.lava = color;
         else if (key == "enemy") palette.enemy = color;
         else if (key == "tower_basic") palette.towerBasic = color;
-        else if (key == "tower_sniper") palette.towerSniper = color;
-        else if (key == "tower_splash") palette.towerSplash = color;
+        else if (key == "tower_frost") palette.towerFrost = color;
+        else if (key == "tower_blocker") palette.towerBlocker = color;
         else if (key == "projectile_basic") palette.projectileBasic = color;
-        else if (key == "projectile_sniper") palette.projectileSniper = color;
-        else if (key == "projectile_splash") palette.projectileSplash = color;
+        else if (key == "projectile_frost") palette.projectileFrost = color;
+        else if (key == "projectile_blocker") palette.projectileBlocker = color;
         else if (key == "button_retry") palette.buttonRetry = color;
         else if (key == "button_retry_hover") palette.buttonRetryHover = color;
         else if (key == "overlay") palette.overlay = color;
@@ -163,76 +98,32 @@ bool RenderSystem::init() {
 
     renderer = SDL_CreateRenderer(window, nullptr);
     if (!renderer) return false;
-    font = TTF_OpenFont("assets/WebLetter.ttf", 24);
-    if (!font) {
-        font = TTF_OpenFont("../assets/WebLetter.ttf", 24);
-    }
-    if (!font) {
+    
+    // Load Font qua AssetManager
+    assets.loadFont("main_font", "assets/WebLetter.ttf", 18, "../assets/WebLetter.ttf");
+    if (!assets.getFont("main_font")) {
         std::cout << "Khong load duoc font: " << SDL_GetError() << std::endl;
     }
-    loadPaletteFromFile(palette);
-    grassTexture = loadTexture(
-        renderer,
-        "assets/spr_grass_02.png",
-        "../assets/spr_grass_02.png"
-    );
 
-    brickTexture = loadTexture(
-        renderer,
-        "assets/brick.png",
-        "../assets/brick.png"
-    );
-    heartTexture = loadTexture(
-        renderer,
-        "assets/heart.png",
-        "../assets/heart.png"
-    );
-    heartAnimatedTexture = loadTexture(
-        renderer,
-        "assets/heart_animated_1.png",
-        "../assets/heart_animated_1.png"
-    );
-    waterTexture = loadTexture(
-        renderer,
-        "assets/water.png",
-        "../assets/water.png"
-    );
-    lavaTexture = loadTexture(
-        renderer,
-        "assets/lava.png",
-        "../assets/lava.png"
-    );
-    enemyAnimatedTexture = loadTexture(
-        renderer,
-        "assets/spr_normal_slime.png",
-        "../assets/spr_normal_slime.png"
-    );
-    towerArcherTexture = loadTexture(
-        renderer,
-        "assets/spr_tower_archer.png",
-        "../assets/spr_tower_archer.png"
-    );
+    loadPaletteFromFile(palette);
     
-    arrowProjectileTexture = loadTexture(
-        renderer,
-        "assets/spr_tower_archer_projectile.png",
-        "../assets/spr_tower_archer_projectile.png"
-    );
-    bgMainMenuTexture = loadTexture(
-        renderer,
-        "assets/bg_main_menu.png",
-        "../assets/bg_main_menu.png"
-    );
-    panelTexture = loadTexture(
-        renderer,
-        "assets/panel.png",
-        "../assets/panel.png"
-    );
-    buttonGreenTexture = loadTexture(
-        renderer,
-        "assets/button_green.png",
-        "../assets/button_green.png"
-    );
+    // Load toan bo Texture vao AssetManager
+    assets.loadTexture(renderer, "grass", "assets/spr_grass_02.png", "../assets/spr_grass_02.png");
+    assets.loadTexture(renderer, "brick", "assets/brick.png", "../assets/brick.png");
+    assets.loadTexture(renderer, "heart", "assets/heart.png", "../assets/heart.png");
+    assets.loadTexture(renderer, "heart_animated", "assets/heart_animated_1.png", "../assets/heart_animated_1.png");
+    assets.loadTexture(renderer, "water", "assets/water.png", "../assets/water.png");
+    assets.loadTexture(renderer, "lava", "assets/lava.png", "../assets/lava.png");
+    assets.loadTexture(renderer, "enemy_slime", "assets/spr_normal_slime.png", "../assets/spr_normal_slime.png");
+    assets.loadTexture(renderer, "tower_archer", "assets/spr_tower_archer.png", "../assets/spr_tower_archer.png");
+    assets.loadTexture(renderer, "arrow_projectile", "assets/spr_tower_archer_projectile.png", "../assets/spr_tower_archer_projectile.png");
+    assets.loadTexture(renderer, "frost_projectile", "assets/spr_tower_ice_wizard_projectile.png", "../assets/spr_tower_ice_wizard_projectile.png");
+    assets.loadTexture(renderer, "tower_frost", "assets/spr_tower_ice_wizard.png", "../assets/spr_tower_ice_wizard.png");
+    assets.loadTexture(renderer, "tower_blocker", "assets/spr_tower_blocker.png", "../assets/spr_tower_blocker.png");
+    assets.loadTexture(renderer, "bg_main_menu", "assets/bg_main_menu.png", "../assets/bg_main_menu.png");
+    assets.loadTexture(renderer, "panel", "assets/panel.png", "../assets/panel.png");
+    assets.loadTexture(renderer, "button_green", "assets/button_green.png", "../assets/button_green.png");
+
     return true;
 }
 
@@ -240,37 +131,38 @@ void RenderSystem::draw(const GameData& data) {
     SDL_SetRenderDrawColor(renderer, 40, 40, 40, 255);
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_Color textColor = {255, 255, 255, 255};
+    
+    // Ve Map
     for (int y = 0; y < MAP_HEIGHT; ++y) {
         for (int x = 0; x < MAP_WIDTH; ++x) {
             TileType tile = data.tileMap[y][x];
             SDL_FRect cell = { (float)x * TILE_SIZE, (float)y * TILE_SIZE, (float)TILE_SIZE, (float)TILE_SIZE };
             if (tile == TileType::Grass) {
-                if (grassTexture != nullptr) {
-                    SDL_RenderTexture(renderer, grassTexture, nullptr, &cell);
+                if (SDL_Texture* tex = assets.getTexture("grass")) {
+                    SDL_RenderTexture(renderer, tex, nullptr, &cell);
                 } else {
-                    setColor(renderer, {palette.grass.r, palette.grass.g, palette.grass.b, 255}); // 255 thay vì 90 để không trong suốt
+                    setColor(renderer, {palette.grass.r, palette.grass.g, palette.grass.b, 255});
                     SDL_RenderFillRect(renderer, &cell);
                 }
             } else if (tile == TileType::Path || tile == TileType::Base) {
-                if (brickTexture != nullptr) {
-                    SDL_RenderTexture(renderer, brickTexture, nullptr, &cell);
+                if (SDL_Texture* tex = assets.getTexture("brick")) {
+                    SDL_RenderTexture(renderer, tex, nullptr, &cell);
                 } else {
-                    setColor(renderer, {palette.path.r, palette.path.g, palette.path.b, 255}); // 255 để không trong suốt
+                    setColor(renderer, {palette.path.r, palette.path.g, palette.path.b, 255});
                     SDL_RenderFillRect(renderer, &cell);
                 }
             }
             else if (tile == TileType::Water) {
-                if (waterTexture != nullptr) {
-                    SDL_RenderTexture(renderer, waterTexture, nullptr, &cell);
+                if (SDL_Texture* tex = assets.getTexture("water")) {
+                    SDL_RenderTexture(renderer, tex, nullptr, &cell);
                 } else {
                     setColor(renderer, palette.water);
                     SDL_RenderFillRect(renderer, &cell);
                 }
             }
             else if (tile == TileType::Lava) {
-                if (lavaTexture != nullptr) {
-                    SDL_RenderTexture(renderer, lavaTexture, nullptr, &cell);
+                if (SDL_Texture* tex = assets.getTexture("lava")) {
+                    SDL_RenderTexture(renderer, tex, nullptr, &cell);
                 } else {
                     setColor(renderer, palette.lava);
                     SDL_RenderFillRect(renderer, &cell);
@@ -289,126 +181,125 @@ void RenderSystem::draw(const GameData& data) {
         SDL_RenderRect(renderer, &hoverRect);
     }
 
-    // Vẽ Quái vật
+    // Ve Quai vat
     for (const auto& enemy : data.enemies) {
-        if (!enemy.active) {
-            continue;
-        }
-
+        if (!enemy.active) continue;
         Position enemyPos = data.enemyPath[enemy.currentStep];
- if (enemyAnimatedTexture != nullptr) {
+        SDL_FRect enemyDst = { (float)enemyPos.x * TILE_SIZE + 16, (float)enemyPos.y * TILE_SIZE + 16, 32.0f, 32.0f };
+
+        if (SDL_Texture* tex = assets.getTexture("enemy_slime")) {
             float texW, texH;
-            SDL_GetTextureSize(enemyAnimatedTexture, &texW, &texH);
+            SDL_GetTextureSize(tex, &texW, &texH);
             int totalFrames = 4;
             float frameW = texW / totalFrames;
             Uint32 currentTime = SDL_GetTicks();
             int currentFrame = (currentTime / 100) % totalFrames;
             SDL_FRect srcRect = { currentFrame * frameW, 0.0f, frameW, texH };    
-            SDL_FRect enemyDst = { 
-                (float)enemyPos.x * TILE_SIZE + 16, 
-                (float)enemyPos.y * TILE_SIZE + 16, 
-                32.0f, 32.0f 
-            };
             
-            // Vẽ animation
-            SDL_RenderTexture(renderer, enemyAnimatedTexture, &srcRect, &enemyDst);
+            if (enemy.slowTimer > 0) SDL_SetTextureColorMod(tex, 100, 150, 255); 
+            else SDL_SetTextureColorMod(tex, 255, 255, 255); 
+            
+            SDL_RenderTexture(renderer, tex, &srcRect, &enemyDst);
         } else {
-            setColor(renderer, palette.enemy);
-            SDL_FRect enemyRect = { 
-                (float)enemyPos.x * TILE_SIZE + 16, 
-                (float)enemyPos.y * TILE_SIZE + 16, 
-                32.0f, 32.0f 
-            };
-            SDL_RenderFillRect(renderer, &enemyRect);
+            if (enemy.slowTimer > 0) setColor(renderer, {100, 150, 255, 255}); 
+            else setColor(renderer, palette.enemy);
+            SDL_RenderFillRect(renderer, &enemyDst);
         }
+
+        // Thanh mau (HP Bar)
         float hpPercent = std::max(0.0f, (float)enemy.hp / enemy.maxHp);
         SDL_FRect bgBar = { (float)enemyPos.x * TILE_SIZE + 12, (float)enemyPos.y * TILE_SIZE + 48, 40.0f, 6.0f };
         SDL_FRect fgBar = { (float)enemyPos.x * TILE_SIZE + 12, (float)enemyPos.y * TILE_SIZE + 48, 40.0f * hpPercent, 6.0f };
-        
-        // Nền thanh máu (màu đỏ)
         SDL_SetRenderDrawColor(renderer, 200, 50, 50, 255);
         SDL_RenderFillRect(renderer, &bgBar);
-        // Phần máu còn lại (màu xanh lá)
         SDL_SetRenderDrawColor(renderer, 50, 200, 50, 255);
         SDL_RenderFillRect(renderer, &fgBar);
-        // Viền thanh máu (màu đen)
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderRect(renderer, &bgBar);
     }
 
-    // Vẽ Operators
+    // Ve Operators
     for (const auto& op : data.operators) {
-       SDL_FRect destRect = { 
-            (float)op.pos.x * TILE_SIZE, 
-            (float)op.pos.y * TILE_SIZE, 
-            (float)TILE_SIZE, (float)TILE_SIZE 
-        };
-        if (op.type == TowerType::Basic && towerArcherTexture != nullptr) {
-            SDL_RenderTexture(renderer, towerArcherTexture, nullptr, &destRect);
-        } else {
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
-            SDL_FRect opBorder = { destRect.x + 4, destRect.y + 4, 56.0f, 56.0f };
-            SDL_RenderRect(renderer, &opBorder);
+        SDL_FRect destRect = { (float)op.pos.x * TILE_SIZE, (float)op.pos.y * TILE_SIZE, (float)TILE_SIZE, (float)TILE_SIZE };
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
+        SDL_FRect opBorder = { destRect.x + 4, destRect.y + 4, 56.0f, 56.0f };
+        SDL_RenderRect(renderer, &opBorder);
+        SDL_FRect opRect = { destRect.x + 8, destRect.y + 8, 48.0f, 48.0f };
 
+        SDL_Texture* texToDraw = nullptr;
+        if (op.type == TowerType::Basic) texToDraw = assets.getTexture("tower_archer");
+        else if (op.type == TowerType::Frost) texToDraw = assets.getTexture("tower_frost");
+        else if (op.type == TowerType::Blocker) texToDraw = assets.getTexture("tower_blocker");
+
+        if (texToDraw != nullptr) {
+            SDL_RenderTexture(renderer, texToDraw, nullptr, &opRect);
+        } else {
             if (op.type == TowerType::Basic) setColor(renderer, palette.towerBasic);
-            else if (op.type == TowerType::Sniper) setColor(renderer, palette.towerSniper);
-            else setColor(renderer, palette.towerSplash);
-            
-            SDL_FRect opRect = { destRect.x + 8, destRect.y + 8, 48.0f, 48.0f };
+            else if (op.type == TowerType::Frost) setColor(renderer, palette.towerFrost);
+            else setColor(renderer, palette.towerBlocker);  
             SDL_RenderFillRect(renderer, &opRect);
         }
+
+        if (op.type == TowerType::Blocker) {
+    float maxHp = getTowerConfig(TowerType::Blocker).maxHp;
+    float hpPercent = std::max(0.0f, (float)op.hp / maxHp);
+    SDL_FRect bgBar = { destRect.x + 12, destRect.y + 4, 40.0f, 4.0f };
+    SDL_FRect fgBar = { destRect.x + 12, destRect.y + 4, 40.0f * hpPercent, 4.0f };
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    SDL_RenderFillRect(renderer, &bgBar);
+    SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+    SDL_RenderFillRect(renderer, &fgBar);
+}
     }
 
-    // Vẽ đạn
+    // Ve Dan
     for (const auto& projectile : data.projectiles) {
- if (projectile.sourceType == TowerType::Basic && arrowProjectileTexture != nullptr) {
+        SDL_Texture* texArrow = assets.getTexture("arrow_projectile");
+        SDL_Texture* texFrost = assets.getTexture("frost_projectile");
+        
+        if (projectile.sourceType == TowerType::Basic && texArrow != nullptr) {
             SDL_FRect bulletDst = { projectile.x - 8.0f, projectile.y - 8.0f, 16.0f, 16.0f };
-            SDL_RenderTexture(renderer, arrowProjectileTexture, nullptr, &bulletDst);
-        } else {
+            SDL_RenderTexture(renderer, texArrow, nullptr, &bulletDst);
+        } 
+        else if (projectile.sourceType == TowerType::Frost && texFrost != nullptr) {
+            SDL_FRect bulletDst = { projectile.x - 8.0f, projectile.y - 8.0f, 16.0f, 16.0f };
+            SDL_RenderTexture(renderer, texFrost, nullptr, &bulletDst);
+        } 
+        else {
             if (projectile.sourceType == TowerType::Basic) setColor(renderer, palette.projectileBasic);
-            else if (projectile.sourceType == TowerType::Sniper) setColor(renderer, palette.projectileSniper);
-            else setColor(renderer, palette.projectileSplash);
-            
+            else if (projectile.sourceType == TowerType::Frost) setColor(renderer, palette.projectileFrost);
+            else setColor(renderer, palette.projectileBlocker);
             SDL_FRect bullet = { projectile.x - 4.0f, projectile.y - 4.0f, 8.0f, 8.0f };
             SDL_RenderFillRect(renderer, &bullet);
         }
     }
-    
-    int maxHearts = 3;
-    float heartSize = 40.0f;
-    float heartGap = 10.0f;
-    float startX = 16.0f;
-    float startY = 16.0f;
 
+    // UI Mang
+    int maxHearts = 3;
+    float heartSize = 40.0f, heartGap = 10.0f, startX = 16.0f, startY = 16.0f;
     for (int i = 0; i < maxHearts; ++i) {
         SDL_FRect heartDst = { startX + i * (heartSize + heartGap), startY, heartSize, heartSize };
         
         if (i < data.baseHP) {
-            // Còn máu -> Vẽ trái tim bình thường
-            if (heartTexture != nullptr) {
-                SDL_RenderTexture(renderer, heartTexture, nullptr, &heartDst);
+            if (SDL_Texture* tex = assets.getTexture("heart")) {
+                SDL_RenderTexture(renderer, tex, nullptr, &heartDst);
             } else {
                 setColor(renderer, {255, 50, 50, 255});
                 SDL_RenderFillRect(renderer, &heartDst);
             }
         } else {
-            // Mất máu -> Sử dụng heart_animated_1.png (5 frames)
-            if (heartAnimatedTexture != nullptr) {
+            if (SDL_Texture* texAnim = assets.getTexture("heart_animated")) {
                 int totalFrames = 5; 
                 float texW, texH;
-                SDL_GetTextureSize(heartAnimatedTexture, &texW, &texH);
+                SDL_GetTextureSize(texAnim, &texW, &texH);
                 float frameW = texW / totalFrames;
                 
-                // Animation nhấp nháy hoặc hiển thị frame cuối
-             Uint64 timeSinceLost = SDL_GetTicks() - data.lostHeartTime[i];
+                Uint64 timeSinceLost = SDL_GetTicks() - data.lostHeartTime[i];
                 int currentFrame = (int)(timeSinceLost / 150);
-                
-                if (currentFrame >= totalFrames) {
-                    currentFrame = totalFrames - 1; // Giữ nguyên ở frame cuối cùng (trái tim vỡ)
-                }
+                if (currentFrame >= totalFrames) currentFrame = totalFrames - 1; 
                 
                 SDL_FRect srcRect = { currentFrame * frameW, 0.0f, frameW, texH };
-                SDL_RenderTexture(renderer, heartAnimatedTexture, &srcRect, &heartDst);
+                SDL_RenderTexture(renderer, texAnim, &srcRect, &heartDst);
             } else {
                 setColor(renderer, {100, 100, 100, 255});
                 SDL_RenderFillRect(renderer, &heartDst);
@@ -416,64 +307,53 @@ void RenderSystem::draw(const GameData& data) {
         }
     }
 
- // ... (Các phần vẽ map, quái, trụ, đạn ở trên giữ nguyên) ...
-
     if (data.gameState != GameState::Playing) {
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        
         float mouseX = 0.0f, mouseY = 0.0f;
         SDL_GetMouseState(&mouseX, &mouseY);
 
         if (data.gameState == GameState::MainMenu) {
-            // 1. Vẽ hình nền Main Menu bao phủ toàn màn hình
-            if (bgMainMenuTexture) {
+            if (SDL_Texture* texBg = assets.getTexture("bg_main_menu")) {
                 SDL_FRect bgRect = {0, 0, (float)(MAP_WIDTH * TILE_SIZE), (float)(MAP_HEIGHT * TILE_SIZE)};
-                SDL_RenderTexture(renderer, bgMainMenuTexture, nullptr, &bgRect);
+                SDL_RenderTexture(renderer, texBg, nullptr, &bgRect);
             } else {
-                setColor(renderer, {100, 180, 255, 255}); // Bầu trời xanh
+                setColor(renderer, {100, 180, 255, 255}); 
                 SDL_FRect bgRect = {0, 0, (float)(MAP_WIDTH * TILE_SIZE), (float)(MAP_HEIGHT * TILE_SIZE)};
                 SDL_RenderFillRect(renderer, &bgRect); 
             }
+            float panelW = 320.0f, panelH = 380.0f;
+            float panelX = (MAP_WIDTH * TILE_SIZE - panelW) / 2.0f;
+            float panelY = (MAP_HEIGHT * TILE_SIZE - panelH) / 2.0f;
+            renderText("TOWER DEFENSE", panelX + 70.0f, panelY - 80.0f, {255, 255, 255, 255});
+            renderText("EPIC BATTLE", panelX + 90.0f, panelY - 40.0f, {200, 230, 255, 255});
 
-            // 2. Vẽ Tiêu đề Game
-            renderText("TOWER DEFENSE", 150.0f, 150.0f, {255, 255, 255, 255});
-            renderText("EPIC BATTLE", 180.0f, 200.0f, {200, 230, 255, 255});
-
-            // Định nghĩa kích thước và vị trí của Panel (Bảng menu)
-            float panelW = 320.0f;
-            float panelH = 380.0f;
-            float panelX = (MAP_WIDTH * TILE_SIZE) - panelW - 100.0f;
-            float panelY = 200.0f;
-
-            // 3. Vẽ Panel 
             SDL_FRect panelRect = {panelX, panelY, panelW, panelH};
-            if (panelTexture) {
-                SDL_RenderTexture(renderer, panelTexture, nullptr, &panelRect);
+            if (SDL_Texture* texPanel = assets.getTexture("panel")) {
+                SDL_RenderTexture(renderer, texPanel, nullptr, &panelRect);
             } else {
-                setColor(renderer, {140, 145, 150, 255}); // Màu xám đá
+                setColor(renderer, {140, 145, 150, 255}); 
                 SDL_RenderFillRect(renderer, &panelRect);
-                setColor(renderer, {80, 85, 90, 255}); // Viền tối màu
+                setColor(renderer, {80, 85, 90, 255}); 
                 SDL_RenderRect(renderer, &panelRect);
             }
 
             renderText("MAIN MENU", panelX + 90.0f, panelY + 15.0f, {255, 255, 255, 255});
 
-            // Thông số các nút bấm
             int btnW = 200, btnH = 60, gap = 30;
             float startBtnY = panelY + 80.0f;
 
-            // Hàm lambda nội bộ để vẽ nút
             auto drawStyledButton = [&](int index, const std::string& text) {
                 float btnX = panelX + (panelW - btnW) / 2.0f;
                 float btnY = startBtnY + index * (btnH + gap);
                 bool hover = mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH;
 
                 SDL_FRect btnRect = {btnX, btnY, (float)btnW, (float)btnH};
+                SDL_Texture* texBtn = assets.getTexture("button_green");
 
-                if (buttonGreenTexture) {
-                    if (hover) SDL_SetTextureColorMod(buttonGreenTexture, 200, 255, 200);
-                    else SDL_SetTextureColorMod(buttonGreenTexture, 255, 255, 255);
-                    SDL_RenderTexture(renderer, buttonGreenTexture, nullptr, &btnRect);
+                if (texBtn) {
+                    if (hover) SDL_SetTextureColorMod(texBtn, 200, 255, 200);
+                    else SDL_SetTextureColorMod(texBtn, 255, 255, 255);
+                    SDL_RenderTexture(renderer, texBtn, nullptr, &btnRect);
                 } else {
                     setColor(renderer, hover ? ColorSwatch{150, 220, 50, 255} : ColorSwatch{120, 200, 40, 255});
                     SDL_RenderFillRect(renderer, &btnRect);
@@ -485,14 +365,11 @@ void RenderSystem::draw(const GameData& data) {
                 renderText(text, btnX + btnW / 2.0f - text.length() * 6.0f, btnY + 16.0f, {255, 255, 255, 255});
             };
 
-            // 4. Vẽ 3 nút bấm
             drawStyledButton(0, "PLAY");
             drawStyledButton(1, "OPTIONS");
             drawStyledButton(2, "QUIT");
-
         }
         else if (data.gameState == GameState::Settings) {
-            // Tạm thời vẽ màn mờ cho Cài đặt
             setColor(renderer, palette.overlay);
             SDL_FRect overlay = { 0.0f, 0.0f, (float)(MAP_WIDTH * TILE_SIZE), (float)(MAP_HEIGHT * TILE_SIZE) };
             SDL_RenderFillRect(renderer, &overlay);
@@ -505,7 +382,6 @@ void RenderSystem::draw(const GameData& data) {
             
             int btnX = (MAP_WIDTH * TILE_SIZE - MENU_BUTTON_WIDTH) / 2;
             int btnY = (MAP_HEIGHT * TILE_SIZE - MENU_BUTTON_HEIGHT) / 2;
-            
             bool hover = mouseX >= btnX && mouseX < btnX + MENU_BUTTON_WIDTH && mouseY >= btnY && mouseY < btnY + MENU_BUTTON_HEIGHT;
 
             setColor(renderer, hover ? palette.buttonRetryHover : palette.buttonRetry);
@@ -524,28 +400,54 @@ void RenderSystem::draw(const GameData& data) {
         }
     } 
     else {
-        // KHỐI LỆNH NÀY SẼ HIỂN THỊ CHỈ SỐ KHI ĐANG CHƠI GAME
+        SDL_FRect uiBg = { 0.0f, (float)(MAP_HEIGHT * TILE_SIZE - 40), (float)(MAP_WIDTH * TILE_SIZE), 40.0f };
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 180); 
+        SDL_RenderFillRect(renderer, &uiBg);
+        
         std::string waveText = "Wave: " + std::to_string(data.currentWave);
-        std::string hpText = "HP: " + std::to_string(data.baseHP);
         std::string goldText = "Gold: " + std::to_string(data.gold);
-        
-        // Tạo thêm text hiển thị giới hạn tháp
         std::string towersInfo = "Towers: " + std::to_string(data.operators.size()) + "/" + std::to_string(data.maxTowers);
-        
-        std::string towerText = "Selected Tower: ";
-        if (data.selectedTowerType == TowerType::Basic) towerText += "Basic ($25)";
-        else if (data.selectedTowerType == TowerType::Sniper) towerText += "Sniper ($40)";
-        else if (data.selectedTowerType == TowerType::Splash) towerText += "Splash ($35)";
-
         SDL_Color textColor = {255, 255, 255, 255};
-        renderText(waveText, 20.0f, MAP_HEIGHT * TILE_SIZE - 40.0f, {200, 255, 200, 255});
-        renderText(goldText, 120.0f, MAP_HEIGHT * TILE_SIZE - 40.0f, {255, 220, 50, 255});
-        renderText(towersInfo, 250.0f, MAP_HEIGHT * TILE_SIZE - 40.0f, {100, 200, 255, 255}); 
-        renderText(towerText, 450.0f, MAP_HEIGHT * TILE_SIZE - 40.0f, textColor); 
+        
+        renderText(waveText, 20.0f, MAP_HEIGHT * TILE_SIZE - 35.0f, {200, 255, 200, 255});
+        renderText(goldText, 150.0f, MAP_HEIGHT * TILE_SIZE - 35.0f, {255, 220, 50, 255});
+        renderText(towersInfo, 300.0f, MAP_HEIGHT * TILE_SIZE - 35.0f, {100, 200, 255, 255}); 
+        renderText("Right-Click to Sell Tower (50%)", 500.0f, MAP_HEIGHT * TILE_SIZE - 35.0f, {200, 200, 200, 255});
+
+        float panelW = 150.0f, panelH = 195.0f;
+        float panelX = (MAP_WIDTH * TILE_SIZE) - panelW - 10.0f, panelY = 10.0f;
+
+        SDL_FRect towerPanel = {panelX, panelY, panelW, panelH};
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200); 
+        SDL_RenderFillRect(renderer, &towerPanel);
+        SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255); 
+        SDL_RenderRect(renderer, &towerPanel);
+
+        renderText("ARMORY", panelX + 35.0f, panelY + 10.0f, {255, 200, 0, 255});
+
+        float btnX = panelX + 15.0f, btnW = 120.0f, btnH = 40.0f;
+
+        SDL_FRect btnBasic = {btnX, panelY + 45.0f, btnW, btnH};
+        setColor(renderer, data.selectedTowerType == TowerType::Basic ? ColorSwatch{100, 255, 100, 255} : ColorSwatch{50, 150, 50, 255});
+        SDL_RenderFillRect(renderer, &btnBasic);
+        renderText("Basic $25", btnX + 10.0f, panelY + 50.0f, textColor);
+
+        SDL_FRect btnFrost = {btnX, panelY + 95.0f, btnW, btnH};
+        setColor(renderer, data.selectedTowerType == TowerType::Frost ? ColorSwatch{100, 200, 255, 255} : ColorSwatch{50, 100, 150, 255});
+        SDL_RenderFillRect(renderer, &btnFrost);
+        renderText("Frost $35", btnX + 10.0f, panelY + 100.0f, textColor);
+
+        SDL_FRect btnBlock = {btnX, panelY + 145.0f, btnW, btnH};
+        setColor(renderer, data.selectedTowerType == TowerType::Blocker ? ColorSwatch{200, 150, 50, 255} : ColorSwatch{150, 100, 30, 255});
+        SDL_RenderFillRect(renderer, &btnBlock);
+        renderText("Block $20", btnX + 10.0f, panelY + 150.0f, textColor);
     }
     SDL_RenderPresent(renderer);
 }
+
 void RenderSystem::renderText(const std::string& text, float x, float y, SDL_Color color, bool isStatic) {
+    TTF_Font* font = assets.getFont("main_font");
     if (!font) return; 
 
     SDL_Texture* textTexture = nullptr;
@@ -567,6 +469,7 @@ void RenderSystem::renderText(const std::string& text, float x, float y, SDL_Col
             SDL_DestroySurface(textSurface);
         }
     }
+    
     if (textTexture) {
         float texW, texH;
         SDL_GetTextureSize(textTexture, &texW, &texH);
@@ -577,51 +480,15 @@ void RenderSystem::renderText(const std::string& text, float x, float y, SDL_Col
         }
     }
 }
+
 void RenderSystem::cleanup() {
     for (auto& pair : textCache) {
         SDL_DestroyTexture(pair.second);
     }
     textCache.clear();
 
-    if (heartAnimatedTexture != nullptr) {
-        SDL_DestroyTexture(heartAnimatedTexture);
-        heartAnimatedTexture = nullptr;
-    }
-    if (heartTexture != nullptr) {
-        SDL_DestroyTexture(heartTexture);
-        heartTexture = nullptr;
-    }
-    if (waterTexture != nullptr) {
-        SDL_DestroyTexture(waterTexture);
-        waterTexture = nullptr;
-    }
-    if (lavaTexture != nullptr) {
-        SDL_DestroyTexture(lavaTexture);
-        lavaTexture = nullptr;
-    }
-    if (grassTexture != nullptr) {
-        SDL_DestroyTexture(grassTexture);
-        grassTexture = nullptr;
-    }
-    if (brickTexture != nullptr) {
-        SDL_DestroyTexture(brickTexture);
-        brickTexture = nullptr;
-    }
-    if (enemyAnimatedTexture != nullptr) {
-        SDL_DestroyTexture(enemyAnimatedTexture);
-        enemyAnimatedTexture = nullptr;
-    }
-    if (towerArcherTexture != nullptr) {
-        SDL_DestroyTexture(towerArcherTexture);
-        towerArcherTexture = nullptr;
-    }
-    if (arrowProjectileTexture != nullptr) {
-        SDL_DestroyTexture(arrowProjectileTexture);
-        arrowProjectileTexture = nullptr;
-    }
-    if (bgMainMenuTexture) SDL_DestroyTexture(bgMainMenuTexture);
-    if (panelTexture) SDL_DestroyTexture(panelTexture);
-    if (buttonGreenTexture) SDL_DestroyTexture(buttonGreenTexture);
+    assets.clear(); // Toan bo tai nguyen hinh anh, font se duoc don dep o day[cite: 5]
+
     TTF_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
