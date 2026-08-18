@@ -116,14 +116,32 @@ bool RenderSystem::init() {
     assets.loadTexture(renderer, "lava", "assets/lava.png", "../assets/lava.png");
     assets.loadTexture(renderer, "enemy_slime", "assets/spr_normal_slime.png", "../assets/spr_normal_slime.png");
     assets.loadTexture(renderer, "tower_archer", "assets/spr_tower_archer.png", "../assets/spr_tower_archer.png");
+    assets.loadTexture(renderer, "tower_archer_alt", "assets/spr_tower_crossbow.png", "../assets/spr_tower_crossbow.png");
     assets.loadTexture(renderer, "arrow_projectile", "assets/spr_tower_archer_projectile.png", "../assets/spr_tower_archer_projectile.png");
+    assets.loadTexture(renderer, "arrow_projectile_alt", "assets/spr_tower_crossbow_projectile.png", "../assets/spr_tower_crossbow_projectile.png");
     assets.loadTexture(renderer, "frost_projectile", "assets/spr_tower_ice_wizard_projectile.png", "../assets/spr_tower_ice_wizard_projectile.png");
+    assets.loadTexture(renderer, "frost_projectile_alt", "assets/spr_tower_poison_wizard_projectile.png", "../assets/spr_tower_poison_wizard_projectile.png");
     assets.loadTexture(renderer, "tower_frost", "assets/spr_tower_ice_wizard.png", "../assets/spr_tower_ice_wizard.png");
-    assets.loadTexture(renderer, "tower_blocker", "assets/spr_tower_blocker.png", "../assets/spr_tower_blocker.png");
+    assets.loadTexture(renderer, "tower_frost_alt", "assets/spr_tower_poison_wizard.png", "../assets/spr_tower_poison_wizard.png");
+    assets.loadTexture(renderer, "tower_cannon", "assets/spr_tower_cannon.png", "../assets/spr_tower_cannon.png");
+    assets.loadTexture(renderer, "cannon_projectile", "assets/spr_tower_cannon_projectile.png", "../assets/spr_tower_cannon_projectile.png");
+    assets.loadTexture(renderer, "tower_electric", "assets/spr_tower_lightning_tower.png", "../assets/spr_tower_lightning_tower.png");
+    assets.loadTexture(renderer, "tower_electric_alt", "assets/spr_tower_poison_wizard.png", "../assets/spr_tower_poison_wizard.png");
+    assets.loadTexture(renderer, "electric_projectile", "assets/spr_tower_lightning_tower_projectile.png", "../assets/spr_tower_lightning_tower_projectile.png");
+    assets.loadTexture(renderer, "tower_tesla", "assets/spr_tower_poison_wizard.png", "../assets/spr_tower_poison_wizard.png");
+    assets.loadTexture(renderer, "tesla_projectile", "assets/spr_tower_poison_wizard_projectile.png", "../assets/spr_tower_poison_wizard_projectile.png");
     assets.loadTexture(renderer, "bg_main_menu", "assets/bg_main_menu.png", "../assets/bg_main_menu.png");
     assets.loadTexture(renderer, "panel", "assets/panel.png", "../assets/panel.png");
     assets.loadTexture(renderer, "button_green", "assets/button_green.png", "../assets/button_green.png");
-
+    assets.loadTexture(renderer, "enemy_goblin", "assets/spr_goblin.png", "../assets/spr_goblin.png");
+    assets.loadTexture(renderer, "enemy_demon", "assets/spr_demon.png", "../assets/spr_demon.png");
+    assets.loadTexture(renderer, "enemy_ghost", "assets/spr_ghost.png", "../assets/spr_ghost.png");
+    assets.loadTexture(renderer, "enemy_zombie", "assets/spr_zombie.png", "../assets/spr_zombie.png");
+    assets.loadTexture(renderer, "enemy_skeleton", "assets/spr_skeleton.png", "../assets/spr_skeleton.png");
+    assets.loadTexture(renderer, "enemy_bat", "assets/spr_bat.png", "../assets/spr_bat.png");
+    assets.loadTexture(renderer, "enemy_king_slime", "assets/spr_king_slime.png", "../assets/spr_king_slime.png");
+    assets.loadTexture(renderer, "enemy_big_slime", "assets/spr_big_slime.png", "../assets/spr_big_slime.png");
+    assets.loadTexture(renderer, "enemy_normal_slime", "assets/spr_normal_slime.png", "../assets/spr_normal_slime.png");
     return true;
 }
 
@@ -181,35 +199,61 @@ void RenderSystem::draw(const GameData& data) {
         SDL_RenderRect(renderer, &hoverRect);
     }
 
-    // Ve Quai vat
+ // Ve Quai vat
     for (const auto& enemy : data.enemies) {
         if (!enemy.active) continue;
         Position enemyPos = data.enemyPath[enemy.currentStep];
         SDL_FRect enemyDst = { (float)enemyPos.x * TILE_SIZE + 16, (float)enemyPos.y * TILE_SIZE + 16, 32.0f, 32.0f };
 
-        if (SDL_Texture* tex = assets.getTexture("enemy_slime")) {
+        // 1. Xác định ID ảnh dựa vào loại quái vật
+        std::string textureId;
+        switch (enemy.type) {
+            case EnemyType::Goblin:   textureId = "enemy_goblin"; break;
+            case EnemyType::Demon:    textureId = "enemy_demon"; break;
+            case EnemyType::Ghost:    textureId = "enemy_ghost"; break;
+            case EnemyType::Zombie:   
+            case EnemyType::Tanker:   textureId = "enemy_zombie"; break;
+            case EnemyType::Skeleton: textureId = "enemy_skeleton"; break;
+            case EnemyType::Bat:      
+            case EnemyType::Fast:     textureId = "enemy_bat"; break;
+            case EnemyType::BigSlime: textureId = "enemy_big_slime"; break;
+            case EnemyType::KingSlime:
+            case EnemyType::Boss:     textureId = "enemy_king_slime"; break;
+            case EnemyType::Normal:
+            default:                  textureId = "enemy_normal_slime"; break;
+        }
+
+        if (SDL_Texture* tex = assets.getTexture(textureId)) {
             float texW, texH;
             SDL_GetTextureSize(tex, &texW, &texH);
-            int totalFrames = 4;
+            
+            // 2. Enemy animation: 4 frames (mỗi frame 1/4 chiều rộng)
+            int totalFrames = 4;  // All enemy sprites have 4 frames
+            
             float frameW = texW / totalFrames;
             Uint32 currentTime = SDL_GetTicks();
-            int currentFrame = (currentTime / 100) % totalFrames;
+            int currentFrame = (currentTime / 100) % totalFrames;  // 100ms per frame
             SDL_FRect srcRect = { currentFrame * frameW, 0.0f, frameW, texH };    
             
-            if (enemy.slowTimer > 0) SDL_SetTextureColorMod(tex, 100, 150, 255); 
-            else SDL_SetTextureColorMod(tex, 255, 255, 255); 
+            // 3. Xử lý màu sắc: Chỉ đổi màu khi bị làm chậm (Băng)
+            if (enemy.slowTimer > 0) {
+                SDL_SetTextureColorMod(tex, 100, 150, 255); // Nhuộm xanh dương
+            } else {
+                SDL_SetTextureColorMod(tex, 255, 255, 255); // Khôi phục màu gốc
+            }
             
             SDL_RenderTexture(renderer, tex, &srcRect, &enemyDst);
         } else {
-            if (enemy.slowTimer > 0) setColor(renderer, {100, 150, 255, 255}); 
-            else setColor(renderer, palette.enemy);
+            // Nhuộm màu Hình chữ nhật đỏ (Fallback nếu không load được ảnh)
+            setColor(renderer, {255, 0, 0, 255});
             SDL_RenderFillRect(renderer, &enemyDst);
         }
 
-        // Thanh mau (HP Bar)
+        // 4. Thanh máu (HP Bar) đặt phía trên đầu quái để dễ nhìn hơn
         float hpPercent = std::max(0.0f, (float)enemy.hp / enemy.maxHp);
-        SDL_FRect bgBar = { (float)enemyPos.x * TILE_SIZE + 12, (float)enemyPos.y * TILE_SIZE + 48, 40.0f, 6.0f };
-        SDL_FRect fgBar = { (float)enemyPos.x * TILE_SIZE + 12, (float)enemyPos.y * TILE_SIZE + 48, 40.0f * hpPercent, 6.0f };
+        float hpBarY = (float)enemyPos.y * TILE_SIZE - 10.0f;
+        SDL_FRect bgBar = { (float)enemyPos.x * TILE_SIZE + 12, hpBarY, 40.0f, 6.0f };
+        SDL_FRect fgBar = { (float)enemyPos.x * TILE_SIZE + 12, hpBarY, 40.0f * hpPercent, 6.0f };
         SDL_SetRenderDrawColor(renderer, 200, 50, 50, 255);
         SDL_RenderFillRect(renderer, &bgBar);
         SDL_SetRenderDrawColor(renderer, 50, 200, 50, 255);
@@ -229,49 +273,73 @@ void RenderSystem::draw(const GameData& data) {
         SDL_Texture* texToDraw = nullptr;
         if (op.type == TowerType::Basic) texToDraw = assets.getTexture("tower_archer");
         else if (op.type == TowerType::Frost) texToDraw = assets.getTexture("tower_frost");
-        else if (op.type == TowerType::Blocker) texToDraw = assets.getTexture("tower_blocker");
+        else if (op.type == TowerType::Electric) texToDraw = assets.getTexture("tower_electric");
+        else if (op.type == TowerType::Cannon) texToDraw = assets.getTexture("tower_cannon");
+        else if (op.type == TowerType::Tesla) texToDraw = assets.getTexture("tower_tesla");
 
         if (texToDraw != nullptr) {
+            // Tower sprites are static images, render without frame animation
             SDL_RenderTexture(renderer, texToDraw, nullptr, &opRect);
         } else {
+            // Fallback colors for towers without sprites
             if (op.type == TowerType::Basic) setColor(renderer, palette.towerBasic);
             else if (op.type == TowerType::Frost) setColor(renderer, palette.towerFrost);
-            else setColor(renderer, palette.towerBlocker);  
+            else if (op.type == TowerType::Electric) SDL_SetRenderDrawColor(renderer, 100, 150, 255, 255);
+            else if (op.type == TowerType::Cannon) SDL_SetRenderDrawColor(renderer, 255, 120, 0, 255);
+            else if (op.type == TowerType::Tesla) SDL_SetRenderDrawColor(renderer, 100, 200, 255, 255);
+            else SDL_SetRenderDrawColor(renderer, 50, 150, 50, 255);  
             SDL_RenderFillRect(renderer, &opRect);
         }
-
-        if (op.type == TowerType::Blocker) {
-    float maxHp = getTowerConfig(TowerType::Blocker).maxHp;
-    float hpPercent = std::max(0.0f, (float)op.hp / maxHp);
-    SDL_FRect bgBar = { destRect.x + 12, destRect.y + 4, 40.0f, 4.0f };
-    SDL_FRect fgBar = { destRect.x + 12, destRect.y + 4, 40.0f * hpPercent, 4.0f };
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-    SDL_RenderFillRect(renderer, &bgBar);
-    SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-    SDL_RenderFillRect(renderer, &fgBar);
-}
+        
+        // Hiển thị level tháp
+        if (op.level > 1) {
+            SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
+            SDL_FRect levelBg = { destRect.x + 40, destRect.y + 4, 16.0f, 16.0f };
+            SDL_RenderFillRect(renderer, &levelBg);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderRect(renderer, &levelBg);
+        }
     }
 
     // Ve Dan
     for (const auto& projectile : data.projectiles) {
         SDL_Texture* texArrow = assets.getTexture("arrow_projectile");
         SDL_Texture* texFrost = assets.getTexture("frost_projectile");
-        
-        if (projectile.sourceType == TowerType::Basic && texArrow != nullptr) {
-            SDL_FRect bulletDst = { projectile.x - 8.0f, projectile.y - 8.0f, 16.0f, 16.0f };
-            SDL_RenderTexture(renderer, texArrow, nullptr, &bulletDst);
-        } 
-        else if (projectile.sourceType == TowerType::Frost && texFrost != nullptr) {
-            SDL_FRect bulletDst = { projectile.x - 8.0f, projectile.y - 8.0f, 16.0f, 16.0f };
-            SDL_RenderTexture(renderer, texFrost, nullptr, &bulletDst);
-        } 
-        else {
+        SDL_Texture* texCannon = assets.getTexture("cannon_projectile");
+        SDL_Texture* texElectric = assets.getTexture("electric_projectile");
+        SDL_Texture* texTesla = assets.getTexture("tesla_projectile");
+
+        SDL_Texture* texProjectile = nullptr;
+        if (projectile.sourceType == TowerType::Basic) texProjectile = texArrow;
+        else if (projectile.sourceType == TowerType::Frost) texProjectile = texFrost;
+        else if (projectile.sourceType == TowerType::Cannon) texProjectile = texCannon;
+        else if (projectile.sourceType == TowerType::Electric) texProjectile = texElectric;
+        else if (projectile.sourceType == TowerType::Tesla) texProjectile = texTesla;
+
+        SDL_FRect bulletDst = { projectile.x - 10.0f, projectile.y - 10.0f, 20.0f, 20.0f };
+        if (texProjectile != nullptr) {
+            SDL_RenderTexture(renderer, texProjectile, nullptr, &bulletDst);
+        }
+
+        if (texProjectile == nullptr) {
             if (projectile.sourceType == TowerType::Basic) setColor(renderer, palette.projectileBasic);
             else if (projectile.sourceType == TowerType::Frost) setColor(renderer, palette.projectileFrost);
+            else if (projectile.sourceType == TowerType::Electric) SDL_SetRenderDrawColor(renderer, 200, 200, 255, 255);
+            else if (projectile.sourceType == TowerType::Cannon) SDL_SetRenderDrawColor(renderer, 255, 150, 0, 255);
+            else if (projectile.sourceType == TowerType::Tesla) SDL_SetRenderDrawColor(renderer, 120, 255, 120, 255);
             else setColor(renderer, palette.projectileBlocker);
-            SDL_FRect bullet = { projectile.x - 4.0f, projectile.y - 4.0f, 8.0f, 8.0f };
-            SDL_RenderFillRect(renderer, &bullet);
+            SDL_RenderFillRect(renderer, &bulletDst);
         }
+    }
+
+    // Vẽ Particles (hiệu ứng)
+    for (const auto& particle : data.particles) {
+        if (!particle.active) continue;
+        float alpha = 1.0f - (particle.lifetime / particle.maxLifetime);
+        SDL_SetRenderDrawColor(renderer, particle.r, particle.g, particle.b, (Uint8)(255 * alpha));
+        SDL_FRect pRect = { particle.x - particle.scale * 2.0f, particle.y - particle.scale * 2.0f, 
+                           particle.scale * 4.0f, particle.scale * 4.0f };
+        SDL_RenderFillRect(renderer, &pRect);
     }
 
     // UI Mang
@@ -400,22 +468,37 @@ void RenderSystem::draw(const GameData& data) {
         }
     } 
     else {
-        SDL_FRect uiBg = { 0.0f, (float)(MAP_HEIGHT * TILE_SIZE - 40), (float)(MAP_WIDTH * TILE_SIZE), 40.0f };
+        // Game UI Bar
+        SDL_FRect uiBg = { 0.0f, (float)(MAP_HEIGHT * TILE_SIZE - 50), (float)(MAP_WIDTH * TILE_SIZE), 50.0f };
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 180); 
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200); 
         SDL_RenderFillRect(renderer, &uiBg);
         
         std::string waveText = "Wave: " + std::to_string(data.currentWave);
         std::string goldText = "Gold: " + std::to_string(data.gold);
+        std::string enemyText = "Enemies: " + std::to_string(data.enemies.size());
         std::string towersInfo = "Towers: " + std::to_string(data.operators.size()) + "/" + std::to_string(data.maxTowers);
-        SDL_Color textColor = {255, 255, 255, 255};
         
-        renderText(waveText, 20.0f, MAP_HEIGHT * TILE_SIZE - 35.0f, {200, 255, 200, 255});
-        renderText(goldText, 150.0f, MAP_HEIGHT * TILE_SIZE - 35.0f, {255, 220, 50, 255});
-        renderText(towersInfo, 300.0f, MAP_HEIGHT * TILE_SIZE - 35.0f, {100, 200, 255, 255}); 
-        renderText("Right-Click to Sell Tower (50%)", 500.0f, MAP_HEIGHT * TILE_SIZE - 35.0f, {200, 200, 200, 255});
+        // Game speed indicator
+        std::string speedText = "Speed: ";
+        if (data.gameSpeed == 0.5f) speedText += "0.5x";
+        else if (data.gameSpeed == 1.0f) speedText += "1.0x";
+        else if (data.gameSpeed == 1.5f) speedText += "1.5x";
+        else if (data.gameSpeed == 2.0f) speedText += "2.0x";
+        else speedText += std::to_string(data.gameSpeed) + "x";
+        
+        SDL_Color uiTextColor = {255, 255, 255, 255};
+        
+        renderText(waveText, 15.0f, MAP_HEIGHT * TILE_SIZE - 45.0f, {200, 255, 200, 255});
+        renderText(goldText, 120.0f, MAP_HEIGHT * TILE_SIZE - 45.0f, {255, 220, 50, 255});
+        renderText(enemyText, 230.0f, MAP_HEIGHT * TILE_SIZE - 45.0f, {255, 100, 100, 255}); 
+        renderText(towersInfo, 350.0f, MAP_HEIGHT * TILE_SIZE - 45.0f, {100, 200, 255, 255});
+        renderText(speedText, 540.0f, MAP_HEIGHT * TILE_SIZE - 45.0f, {200, 200, 100, 255});
+        
+        // Info bar
+        renderText("Right-Click=Sell | Mid-Click=Upgrade | ESC=Pause", 15.0f, MAP_HEIGHT * TILE_SIZE - 20.0f, {180, 180, 180, 255});
 
-        float panelW = 150.0f, panelH = 195.0f;
+        float panelW = 150.0f, panelH = 280.0f;
         float panelX = (MAP_WIDTH * TILE_SIZE) - panelW - 10.0f, panelY = 10.0f;
 
         SDL_FRect towerPanel = {panelX, panelY, panelW, panelH};
@@ -426,22 +509,37 @@ void RenderSystem::draw(const GameData& data) {
 
         renderText("ARMORY", panelX + 35.0f, panelY + 10.0f, {255, 200, 0, 255});
 
-        float btnX = panelX + 15.0f, btnW = 120.0f, btnH = 40.0f;
+        float btnX = panelX + 10.0f, btnW = 130.0f, btnH = 35.0f;
 
-        SDL_FRect btnBasic = {btnX, panelY + 45.0f, btnW, btnH};
+        // Nút Basic
+        SDL_FRect btnBasic = {btnX, panelY + 40.0f, btnW, btnH};
         setColor(renderer, data.selectedTowerType == TowerType::Basic ? ColorSwatch{100, 255, 100, 255} : ColorSwatch{50, 150, 50, 255});
         SDL_RenderFillRect(renderer, &btnBasic);
-        renderText("Basic $25", btnX + 10.0f, panelY + 50.0f, textColor);
+        renderText("1:Basic $25", btnX + 5.0f, panelY + 45.0f, uiTextColor);
 
-        SDL_FRect btnFrost = {btnX, panelY + 95.0f, btnW, btnH};
+        // Nút Frost
+        SDL_FRect btnFrost = {btnX, panelY + 75.0f, btnW, btnH};
         setColor(renderer, data.selectedTowerType == TowerType::Frost ? ColorSwatch{100, 200, 255, 255} : ColorSwatch{50, 100, 150, 255});
         SDL_RenderFillRect(renderer, &btnFrost);
-        renderText("Frost $35", btnX + 10.0f, panelY + 100.0f, textColor);
+        renderText("2:Frost $35", btnX + 5.0f, panelY + 80.0f, uiTextColor);
 
-        SDL_FRect btnBlock = {btnX, panelY + 145.0f, btnW, btnH};
-        setColor(renderer, data.selectedTowerType == TowerType::Blocker ? ColorSwatch{200, 150, 50, 255} : ColorSwatch{150, 100, 30, 255});
-        SDL_RenderFillRect(renderer, &btnBlock);
-        renderText("Block $20", btnX + 10.0f, panelY + 150.0f, textColor);
+        // Nút Electric
+        SDL_FRect btnElectric = {btnX, panelY + 110.0f, btnW, btnH};
+        setColor(renderer, data.selectedTowerType == TowerType::Electric ? ColorSwatch{150, 200, 255, 255} : ColorSwatch{80, 120, 180, 255});
+        SDL_RenderFillRect(renderer, &btnElectric);
+        renderText("3:Elec $45", btnX + 5.0f, panelY + 115.0f, uiTextColor);
+
+        // Nút Cannon
+        SDL_FRect btnCannon = {btnX, panelY + 145.0f, btnW, btnH};
+        setColor(renderer, data.selectedTowerType == TowerType::Cannon ? ColorSwatch{255, 180, 50, 255} : ColorSwatch{200, 120, 20, 255});
+        SDL_RenderFillRect(renderer, &btnCannon);
+        renderText("4:Canon $55", btnX + 5.0f, panelY + 150.0f, uiTextColor);
+
+        // Nút Tesla (Poison Wizard)
+        SDL_FRect btnTesla = {btnX, panelY + 180.0f, btnW, btnH};
+        setColor(renderer, data.selectedTowerType == TowerType::Tesla ? ColorSwatch{120, 255, 120, 255} : ColorSwatch{70, 160, 80, 255});
+        SDL_RenderFillRect(renderer, &btnTesla);
+        renderText("5:Poison $50", btnX + 5.0f, panelY + 185.0f, uiTextColor);
     }
     SDL_RenderPresent(renderer);
 }

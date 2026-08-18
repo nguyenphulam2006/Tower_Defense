@@ -23,11 +23,7 @@ bool isInsideRect(int x, int y, int rectX, int rectY, int rectW, int rectH) {
 bool isBuildableTile(const GameData& data, int gridX, int gridY, TowerType type) {
         if (gridX < 0 || gridX >= MAP_WIDTH || gridY < 0 || gridY >= MAP_HEIGHT) return false;
         TileType tile = data.tileMap[gridY][gridX];
-        if (type == TowerType::Blocker) {
-            return tile == TileType::Path;
-        } else {
-            return tile == TileType::Grass;
-        }
+        return tile == TileType::Grass;
     }
 }
 void InputSystem::handleInput(SDL_Event& event, GameData& data) {
@@ -56,8 +52,14 @@ void InputSystem::handleInput(SDL_Event& event, GameData& data) {
 if (data.gameState == GameState::Playing) {
             if (event.key.scancode == SDL_SCANCODE_1) data.selectedTowerType = TowerType::Basic;
             else if (event.key.scancode == SDL_SCANCODE_2) data.selectedTowerType = TowerType::Frost;
-            else if (event.key.scancode == SDL_SCANCODE_3) data.selectedTowerType = TowerType::Blocker;
-        }
+            else if (event.key.scancode == SDL_SCANCODE_3) data.selectedTowerType = TowerType::Electric;
+            else if (event.key.scancode == SDL_SCANCODE_4) data.selectedTowerType = TowerType::Cannon;
+            else if (event.key.scancode == SDL_SCANCODE_5) data.selectedTowerType = TowerType::Tesla;
+            // Tốc độ chơi
+            else if (event.key.scancode == SDL_SCANCODE_MINUS) data.gameSpeed = 0.5f;
+            else if (event.key.scancode == SDL_SCANCODE_EQUALS) data.gameSpeed = 1.0f;
+            else if (event.key.scancode == SDL_SCANCODE_RIGHTBRACKET) data.gameSpeed = 1.5f;
+            else if (event.key.scancode == SDL_SCANCODE_BACKSLASH) data.gameSpeed = 2.0f;        }
     }
 if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_RIGHT) {
         int gridX = (int)(event.button.x / TILE_SIZE);
@@ -70,8 +72,24 @@ if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTT
                 break;
             }
         }
-    }
-    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_LEFT) {
+    }    
+    // Nâng cấp tháp bằng middle-click
+    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_MIDDLE) {
+        int gridX = (int)(event.button.x / TILE_SIZE);
+        int gridY = (int)(event.button.y / TILE_SIZE);
+        for (auto& tower : data.operators) {
+            if (tower.pos.x == gridX && tower.pos.y == gridY) {
+                int upgradeCost = (tower.level) * getTowerConfig(tower.type).cost / 2;
+                if (tower.level < 5 && data.gold >= upgradeCost) {
+                    data.gold -= upgradeCost;
+                    tower.level++;
+                    tower.rangeBonus += 0.1f * TILE_SIZE;
+                    tower.cooldownBonus = tower.level * 0.05f;
+                }
+                break;
+            }
+        }
+    }    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_LEFT) {
         float mouseX = event.button.x;
         float mouseY = event.button.y;
 // 1. XỬ LÝ CLICK: MAIN MENU (Giao diện lệch sang phải)
@@ -118,13 +136,15 @@ if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTT
             }
             return;
         }
-if (mouseX >= 800 && mouseX <= 950 && mouseY >= 10 && mouseY <= 205) {
+if (mouseX >= 800 && mouseX <= 950 && mouseY >= 10 && mouseY <= 220) {
             // Kiểm tra click vào khoảng X của các nút
             if (mouseX >= 815 && mouseX <= 935) {
-                // Tọa độ Y tương ứng với 3 nút
-                if (mouseY >= 55 && mouseY <= 95) data.selectedTowerType = TowerType::Basic;
-                else if (mouseY >= 105 && mouseY <= 145) data.selectedTowerType = TowerType::Frost;
-                else if (mouseY >= 155 && mouseY <= 195) data.selectedTowerType = TowerType::Blocker;
+                // Tọa độ Y tương ứng với 5 nút
+                if (mouseY >= 40 && mouseY <= 70) data.selectedTowerType = TowerType::Basic;
+                else if (mouseY >= 75 && mouseY <= 105) data.selectedTowerType = TowerType::Frost;
+                else if (mouseY >= 110 && mouseY <= 140) data.selectedTowerType = TowerType::Electric;
+                else if (mouseY >= 145 && mouseY <= 175) data.selectedTowerType = TowerType::Cannon;
+                else if (mouseY >= 180 && mouseY <= 210) data.selectedTowerType = TowerType::Tesla;
             }
             return; // Trả về luôn để không đặt tháp khi bấm vào giao diện
         }
