@@ -49,7 +49,7 @@ void InputSystem::handleInput(SDL_Event& event, GameData& data) {
             MapSystem::resetGame(data);
             return;
         }
-if (data.gameState == GameState::Playing) {
+        if (data.gameState == GameState::Playing) {
             if (event.key.scancode == SDL_SCANCODE_1) data.selectedTowerType = TowerType::Basic;
             else if (event.key.scancode == SDL_SCANCODE_2) data.selectedTowerType = TowerType::Frost;
             else if (event.key.scancode == SDL_SCANCODE_3) data.selectedTowerType = TowerType::Electric;
@@ -59,9 +59,10 @@ if (data.gameState == GameState::Playing) {
             else if (event.key.scancode == SDL_SCANCODE_MINUS) data.gameSpeed = 0.5f;
             else if (event.key.scancode == SDL_SCANCODE_EQUALS) data.gameSpeed = 1.0f;
             else if (event.key.scancode == SDL_SCANCODE_RIGHTBRACKET) data.gameSpeed = 1.5f;
-            else if (event.key.scancode == SDL_SCANCODE_BACKSLASH) data.gameSpeed = 2.0f;        }
+            else if (event.key.scancode == SDL_SCANCODE_BACKSLASH) data.gameSpeed = 2.0f;        
+        }
     }
-if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_RIGHT) {
+    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_RIGHT) {
         int gridX = (int)(event.button.x / TILE_SIZE);
         int gridY = (int)(event.button.y / TILE_SIZE);
         for (auto it = data.operators.begin(); it != data.operators.end(); ++it) {
@@ -89,15 +90,18 @@ if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTT
                 break;
             }
         }
-    }    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_LEFT) {
+    }    
+    
+    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_LEFT) {
         float mouseX = event.button.x;
         float mouseY = event.button.y;
-// 1. XỬ LÝ CLICK: MAIN MENU (Giao diện lệch sang phải)
+        
+        // 1. XỬ LÝ CLICK: MAIN MENU (Giao diện lệch sang phải)
         if (data.gameState == GameState::MainMenu) {
-        float panelW = 320.0f;
-        float panelH = 380.0f;
-        float panelX = (MAP_WIDTH * TILE_SIZE - panelW) / 2.0f; 
-        float panelY = (MAP_HEIGHT * TILE_SIZE - panelH) / 2.0f;
+            float panelW = 320.0f;
+            float panelH = 380.0f;
+            float panelX = (MAP_WIDTH * TILE_SIZE - panelW) / 2.0f; 
+            float panelY = (MAP_HEIGHT * TILE_SIZE - panelH) / 2.0f;
             float btnW = 200.0f, btnH = 60.0f, gap = 30.0f;
             float btnX = panelX + (panelW - btnW) / 2.0f;
             float startBtnY = panelY + 80.0f;
@@ -124,30 +128,58 @@ if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTT
             return;
         }
 
-       // 4. XỬ LÝ CLICK: PAUSED & GAME OVER (Menu căn giữa như cũ)
+       // 4. XỬ LÝ CLICK: PAUSED & GAME OVER
         if (data.gameState == GameState::GameOver || data.gameState == GameState::Paused) {
             int centerX = (MAP_WIDTH * TILE_SIZE) / 2;
             int centerY = (MAP_HEIGHT * TILE_SIZE) / 2;
             int btnW = 240, btnH = 50;
+            
+            // Tọa độ Y của 2 nút (cách nhau một khoảng)
+            int btn1Y = centerY - 40; 
+            int btn2Y = centerY + 30; 
 
-            if (isInsideRect(mouseX, mouseY, centerX - btnW/2, centerY, btnW, btnH)) {
+            // Nút 1: RESUME (nếu đang Pause) hoặc RETRY (nếu Game Over)
+            if (isInsideRect(mouseX, mouseY, centerX - btnW/2, btn1Y, btnW, btnH)) {
                 if (data.gameState == GameState::GameOver) MapSystem::resetGame(data, data.currentLevel); 
                 else if (data.gameState == GameState::Paused) data.gameState = GameState::Playing; 
             }
+            // Nút 2: Trở về MAIN MENU
+            else if (isInsideRect(mouseX, mouseY, centerX - btnW/2, btn2Y, btnW, btnH)) {
+                data.gameState = GameState::MainMenu;
+            }
             return;
         }
-if (mouseX >= 800 && mouseX <= 950 && mouseY >= 10 && mouseY <= 220) {
+
+        // 5. XỬ LÝ CLICK: BẢNG ARMORY (CHỌN THÁP) BÊN PHẢI MÀN HÌNH
+        float panelW = 150.0f, panelH = 280.0f;
+        float panelX = (MAP_WIDTH * TILE_SIZE) - panelW - 10.0f;
+        float panelY = 10.0f;
+
+        // Kiểm tra xem click chuột có nằm trong khu vực của bảng UI không
+        if (mouseX >= panelX && mouseX <= panelX + panelW && 
+            mouseY >= panelY && mouseY <= panelY + panelH) {
+            
+            float btnX = panelX + 10.0f;
+            float btnW = 130.0f;
+            float btnH = 35.0f;
+            
             // Kiểm tra click vào khoảng X của các nút
-            if (mouseX >= 815 && mouseX <= 935) {
-                // Tọa độ Y tương ứng với 5 nút
-                if (mouseY >= 40 && mouseY <= 70) data.selectedTowerType = TowerType::Basic;
-                else if (mouseY >= 75 && mouseY <= 105) data.selectedTowerType = TowerType::Frost;
-                else if (mouseY >= 110 && mouseY <= 140) data.selectedTowerType = TowerType::Electric;
-                else if (mouseY >= 145 && mouseY <= 175) data.selectedTowerType = TowerType::Cannon;
-                else if (mouseY >= 180 && mouseY <= 210) data.selectedTowerType = TowerType::Tesla;
+            if (mouseX >= btnX && mouseX <= btnX + btnW) {
+                // Tọa độ Y tương ứng với 5 nút (Khoảng cách mỗi nút là 35px)
+                if (mouseY >= panelY + 40.0f && mouseY <= panelY + 40.0f + btnH) 
+                    data.selectedTowerType = TowerType::Basic;
+                else if (mouseY >= panelY + 75.0f && mouseY <= panelY + 75.0f + btnH) 
+                    data.selectedTowerType = TowerType::Frost;
+                else if (mouseY >= panelY + 110.0f && mouseY <= panelY + 110.0f + btnH) 
+                    data.selectedTowerType = TowerType::Electric;
+                else if (mouseY >= panelY + 145.0f && mouseY <= panelY + 145.0f + btnH) 
+                    data.selectedTowerType = TowerType::Cannon;
+                else if (mouseY >= panelY + 180.0f && mouseY <= panelY + 180.0f + btnH) 
+                    data.selectedTowerType = TowerType::Tesla;
             }
-            return; // Trả về luôn để không đặt tháp khi bấm vào giao diện
+            return; // Trả về luôn để không đặt tháp xuyên qua UI
         }
+        
         // LOGIC ĐẶT THÁP
         int gridX = (int)(mouseX / TILE_SIZE);
         int gridY = (int)(mouseY / TILE_SIZE);
