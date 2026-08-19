@@ -4,7 +4,7 @@
 #include <sstream>
 
 void MapSystem::initGame(GameData& data) {
-    loadMapFromFile(data, "assets/map1.txt");
+    loadMapFromFile(data, "assets/Map/map1.txt");
     data.gameState = GameState::MainMenu;
 }
 
@@ -12,12 +12,12 @@ void MapSystem::resetGame(GameData& data, int levelToLoad) {
     if (levelToLoad != -1) {
         data.currentLevel = levelToLoad;
     }
-    loadMapFromFile(data, "assets/map" + std::to_string(data.currentLevel) + ".txt");
+    loadMapFromFile(data, "assets/Map/map" + std::to_string(data.currentLevel) + ".txt");
 
     data.baseHP = 3;
     data.gold = 100;
     data.currentWave = 1;
-    data.enemiesPerWave = 5;
+    data.enemiesPerWave = 4 + data.currentLevel;
     data.enemiesSpawnedThisWave = 0;
     data.nextEnemyId = 1;
     data.spawnTimer = 0.0f;

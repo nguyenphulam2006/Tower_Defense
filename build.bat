@@ -1,1 +1,1 @@
-g++ src/main.cpp src/InputSystem.cpp src/LogicSystem.cpp src/RenderSystem.cpp src/MapSystem.cpp src/AssetManager.cpp src/SoundSystem.cpp src/EffectsSystem.cpp src/ScoreManager.cpp -I include -L lib -o bin/TowerDefenseGame -lSDL3 -lSDL3_ttf
+g++ src/main.cpp src/InputSystem.cpp src/LogicSystem.cpp src/RenderSystem.cpp src/MapSystem.cpp src/AssetManager.cpp src/SoundSystem.cpp src/EffectsSystem.cpp src/ScoreManager.cpp -I include -L lib -o bin/TowerDefenseGame -lSDL3 -lSDL3_ttf -lwinmm

@@ -5,19 +5,25 @@
 #include "RenderSystem.h"
 #include "InputSystem.h"
 #include "MapSystem.h"
+#include "SoundSystem.h"
 
 int main(int argc, char* argv[]) {
     GameData data;
     LogicSystem logic;
     RenderSystem render;
     InputSystem input;
+    SoundSystem sound;
 
     if (!render.init()) return -1;
     MapSystem::initGame(data);
+    if (!sound.loadMusic("assets/Music/Music.mp3")) {
+        sound.loadMusic("../assets/Music/Music.mp3");
+    }
 
     bool isRunning = true;
     SDL_Event event;
     Uint64 lastTime = SDL_GetTicks();
+    GameState previousState = data.gameState;
 
     while (isRunning) {
         while (SDL_PollEvent(&event)) {
@@ -26,6 +32,19 @@ int main(int argc, char* argv[]) {
             }
             input.handleInput(event, data);
         }
+
+        if (data.requestQuit) {
+            isRunning = false;
+            continue;
+        }
+
+        if (data.gameState == GameState::Playing && previousState != GameState::Playing) {
+            sound.playMusic(true);
+        } else if ((data.gameState == GameState::MainMenu || data.gameState == GameState::GameOver) &&
+                   previousState != data.gameState) {
+            sound.stopMusic();
+        }
+        previousState = data.gameState;
 
         Uint64 currentTime = SDL_GetTicks();
         float deltaTime = (currentTime - lastTime) / 1000.0f;

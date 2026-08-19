@@ -1,5 +1,6 @@
 #include "LogicSystem.h"
 #include "EffectsSystem.h"
+#include "MapSystem.h"
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -77,7 +78,7 @@ void LogicSystem::update(GameData& data, float deltaTime) {
             // Chọn loại quái dựa trên wave
             EnemyType type = EnemyType::Normal;
             
-            if (data.currentWave % 5 == 0 && data.enemiesSpawnedThisWave == data.enemiesPerWave - 1) {
+            if (data.currentWave % 4 == 0 && data.enemiesSpawnedThisWave == data.enemiesPerWave - 1) {
                 type = EnemyType::KingSlime; 
             } 
             else {
@@ -116,7 +117,7 @@ void LogicSystem::update(GameData& data, float deltaTime) {
             enemy.reward = cfg.reward;
             
             // Scale HP theo wave (tăng 20% mỗi wave)
-            float waveHpScale = 1.0f + (data.currentWave - 1) * 0.2f;
+            float waveHpScale = 1.0f + (data.currentWave - 1) * 0.2f + (data.currentLevel - 1) * 0.35f;
             // Thêm bonus cho Endless mode
             if (data.gameMode == GameMode::Endless) {
                 waveHpScale *= 1.0f + (data.currentWave - 1) * 0.1f;
@@ -140,6 +141,15 @@ void LogicSystem::update(GameData& data, float deltaTime) {
             }
             data.gold += waveReward;
             data.totalGoldEarned += waveReward;
+
+            if (data.gameMode == GameMode::Normal && data.currentWave % 4 == 0) {
+                if (data.currentLevel < 3) {
+                    MapSystem::resetGame(data, data.currentLevel + 1);
+                } else {
+                    data.currentLevel = 1;
+                    data.gameState = GameState::MainMenu;
+                }
+            }
         }
     } 
     else {
@@ -191,33 +201,7 @@ void LogicSystem::update(GameData& data, float deltaTime) {
         
         if (tower.fireTimer < effectiveCooldown) continue;
 
-        // === TESLA TOWER ===
-        if (tower.type == TowerType::Tesla) {
-            const float towerX = toWorldCenterX(tower.pos.x);
-            const float towerY = toWorldCenterY(tower.pos.y);
-            auto enemiesInRange = getEnemiesInRange(data, towerX, towerY, effectiveRange);
-            
-            for (auto target : enemiesInRange) {
-                target->hp -= effectiveDamage;
-                if (target->hp <= 0) {
-                    target->active = false;
-                    data.gold += target->reward;
-                    data.totalEnemiesKilled++;
-                    tower.totalDamage += (int)target->maxHp;
-                    Position tPos = data.enemyPath[target->currentStep];
-                    EffectsSystem::createExplosion(data, toWorldCenterX(tPos.x), toWorldCenterY(tPos.y), 10, 120, 255, 120);
-                }
-                Position tPos = data.enemyPath[target->currentStep];
-                EffectsSystem::createSparkles(data, toWorldCenterX(tPos.x), toWorldCenterY(tPos.y), 12, 120, 255, 120);
-                EffectsSystem::createElectricSparkEffect(data, towerX, towerY,
-                                                        toWorldCenterX(tPos.x), toWorldCenterY(tPos.y));
-            }
-            
-            tower.fireTimer = 0.0f;
-            continue;
-        }
-
-        // === BASIC, FROST, ELECTRIC, CANNON ===
+        // TẤT CẢ các tháp giờ đây đều dùng chung logic tìm mục tiêu gần nhất
         const float towerX = toWorldCenterX(tower.pos.x);
         const float towerY = toWorldCenterY(tower.pos.y);
         Enemy* target = nullptr;
@@ -236,100 +220,19 @@ void LogicSystem::update(GameData& data, float deltaTime) {
         }
 
         if (target != nullptr) {
-            // === ELECTRIC TOWER (Chain Lightning) ===
-            if (tower.type == TowerType::Electric) {
-                Position targetPos = data.enemyPath[target->currentStep];
-                target->hp -= effectiveDamage;
-                if (target->hp <= 0) {
-                    target->active = false;
-                    data.gold += target->reward;
-                    data.totalEnemiesKilled++;
-                    tower.totalDamage += (int)target->maxHp;
-                }
-                tower.totalDamage += effectiveDamage;
-                
-                // Tìm enemy gần nhất tiếp theo trong 1 tile
-                std::vector<Enemy*> chainTargets;
-                chainTargets.push_back(target);
-                for (int chain = 0; chain < 2 && chain < tower.level; ++chain) {
-                    Enemy* nextTarget = nullptr;
-                    float nextDist = TILE_SIZE * 2.0f * TILE_SIZE * 2.0f;
-                    Position lastPos = data.enemyPath[chainTargets.back()->currentStep];
-                    float lastX = toWorldCenterX(lastPos.x);
-                    float lastY = toWorldCenterY(lastPos.y);
-                    
-                    for (auto& enemy : data.enemies) {
-                        if (!enemy.active) continue;
-                        bool alreadyChained = false;
-                        for (auto c : chainTargets) {
-                            if (c->id == enemy.id) {
-                                alreadyChained = true;
-                                break;
-                            }
-                        }
-                        if (alreadyChained) continue;
-                        
-                        Position ePos = data.enemyPath[enemy.currentStep];
-                        float eX = toWorldCenterX(ePos.x);
-                        float eY = toWorldCenterY(ePos.y);
-                        float d = distanceSquared(lastX, lastY, eX, eY);
-                        if (d < nextDist) {
-                            nextDist = d;
-                            nextTarget = &enemy;
-                        }
-                    }
-                    
-                    if (nextTarget) {
-                        nextTarget->hp -= effectiveDamage / 2;
-                        if (nextTarget->hp <= 0) {
-                            nextTarget->active = false;
-                            data.gold += nextTarget->reward;
-                            data.totalEnemiesKilled++;
-                        }
-                        tower.totalDamage += effectiveDamage / 2;
-                        chainTargets.push_back(nextTarget);
-                    } else {
-                        break;
-                    }
-                }
-                
-                tower.fireTimer = 0.0f;
-                continue;
-            }
-
-            // === CANNON TOWER (AOE) ===
-            if (tower.type == TowerType::Cannon) {
-                Position targetPos = data.enemyPath[target->currentStep];
-                float targetX = toWorldCenterX(targetPos.x);
-                float targetY = toWorldCenterY(targetPos.y);
-                
-                auto aoeEnemies = getEnemiesInRange(data, targetX, targetY, getTowerConfig(tower.type).splashRadius);
-                for (auto aoeTarget : aoeEnemies) {
-                    aoeTarget->hp -= effectiveDamage;
-                    if (aoeTarget->hp <= 0) {
-                        aoeTarget->active = false;
-                        data.gold += aoeTarget->reward;
-                        data.totalEnemiesKilled++;
-                    }
-                    tower.totalDamage += effectiveDamage;
-                }
-                
-                EffectsSystem::createExplosion(data, targetX, targetY, 15, 255, 180, 0);
-                tower.fireTimer = 0.0f;
-                continue;
-            }
-
-            // === BASIC & FROST ===
             Projectile projectile;
             projectile.x = towerX;
             projectile.y = towerY;
             projectile.targetEnemyId = target->id;
             projectile.damage = effectiveDamage;
-            projectile.speed = stats.projectileSpeed;
+            
+            // Đảm bảo đạn có tốc độ bay
+            projectile.speed = (stats.projectileSpeed > 0) ? stats.projectileSpeed : 350.0f; 
             projectile.splashRadius = stats.splashRadius;
             projectile.sourceType = tower.type;
             projectile.isFrost = stats.isFrost;
             projectile.isElectric = (tower.type == TowerType::Electric);
+            
             data.projectiles.push_back(projectile);
             tower.fireTimer = 0.0f;
         }
@@ -351,33 +254,104 @@ void LogicSystem::update(GameData& data, float deltaTime) {
         float dy = targetY - projectile.y;
         float dist = std::sqrt(dx * dx + dy * dy);
 
+        // KHI ĐẠN CHẠM MỤC TIÊU
         if (dist <= projectile.speed * deltaTime || dist <= 1.0f) {
+            // 1. Kích hoạt hiệu ứng hình ảnh
             if (projectile.isFrost) {
                 target->slowTimer = 2.0f;
                 EffectsSystem::createSparkles(data, targetX, targetY, 6, 100, 150, 255);
             }
             if (projectile.sourceType == TowerType::Electric) {
-                EffectsSystem::createElectricSparkEffect(data, projectile.x, projectile.y, targetX, targetY);
                 EffectsSystem::createSparkles(data, targetX, targetY, 8, 200, 200, 255);
             }
             if (projectile.sourceType == TowerType::Cannon) {
-                EffectsSystem::createExplosion(data, targetX, targetY, 14, 255, 140, 0);
+                EffectsSystem::createExplosion(data, targetX, targetY, 15, 255, 140, 0);
             }
             if (projectile.sourceType == TowerType::Tesla) {
                 EffectsSystem::createSparkles(data, targetX, targetY, 12, 120, 255, 120);
                 EffectsSystem::createExplosion(data, targetX, targetY, 8, 120, 255, 120);
             }
             
-            target->hp -= projectile.damage;
-            if (target->hp <= 0) {
-                target->active = false;
-                data.gold += target->reward;
-                data.totalEnemiesKilled++;
-                EffectsSystem::createExplosion(data, targetX, targetY, 10, 200, 100, 50);
+            // 2. Kích hoạt logic Sát thương riêng biệt cho từng tháp
+            if (projectile.sourceType == TowerType::Cannon || projectile.sourceType == TowerType::Tesla) {
+                // Sát thương AOE (Nổ lan)
+                float radius = (projectile.splashRadius > 0) ? projectile.splashRadius : TILE_SIZE * 1.5f;
+                auto aoeEnemies = getEnemiesInRange(data, targetX, targetY, radius);
+                for (auto aoeTarget : aoeEnemies) {
+                    aoeTarget->hp -= projectile.damage;
+                    if (aoeTarget->hp <= 0) {
+                        aoeTarget->active = false;
+                        data.gold += aoeTarget->reward;
+                        data.totalEnemiesKilled++;
+                    }
+                }
+            } 
+            else if (projectile.sourceType == TowerType::Electric) {
+                // Sát thương điện - Giật mục tiêu chính
+                target->hp -= projectile.damage;
+                if (target->hp <= 0) {
+                    target->active = false;
+                    data.gold += target->reward;
+                    data.totalEnemiesKilled++;
+                }
+                
+                // Chain Lightning (Giật dây chuyền sang mục tiêu khác)
+                std::vector<Enemy*> chainTargets;
+                chainTargets.push_back(target);
+                for (int chain = 0; chain < 2; ++chain) { 
+                    Enemy* nextTarget = nullptr;
+                    float nextDist = TILE_SIZE * 2.0f * TILE_SIZE * 2.0f;
+                    Position lastPos = data.enemyPath[chainTargets.back()->currentStep];
+                    float lastX = toWorldCenterX(lastPos.x);
+                    float lastY = toWorldCenterY(lastPos.y);
+                    
+                    for (auto& enemy : data.enemies) {
+                        if (!enemy.active) continue;
+                        bool alreadyChained = false;
+                        for (auto c : chainTargets) {
+                            if (c->id == enemy.id) { alreadyChained = true; break; }
+                        }
+                        if (alreadyChained) continue;
+                        
+                        Position ePos = data.enemyPath[enemy.currentStep];
+                        float eX = toWorldCenterX(ePos.x);
+                        float eY = toWorldCenterY(ePos.y);
+                        float d = distanceSquared(lastX, lastY, eX, eY);
+                        if (d < nextDist) {
+                            nextDist = d;
+                            nextTarget = &enemy;
+                        }
+                    }
+                    
+                    if (nextTarget) {
+                        Position ePos = data.enemyPath[nextTarget->currentStep];
+                        EffectsSystem::createElectricSparkEffect(data, lastX, lastY, toWorldCenterX(ePos.x), toWorldCenterY(ePos.y));
+                        nextTarget->hp -= projectile.damage / 2;
+                        if (nextTarget->hp <= 0) {
+                            nextTarget->active = false;
+                            data.gold += nextTarget->reward;
+                            data.totalEnemiesKilled++;
+                        }
+                        chainTargets.push_back(nextTarget);
+                    } else {
+                        break;
+                    }
+                }
+            } 
+            else {
+                // Tháp Basic & Frost (Sát thương đơn mục tiêu)
+                target->hp -= projectile.damage;
+                if (target->hp <= 0) {
+                    target->active = false;
+                    data.gold += target->reward;
+                    data.totalEnemiesKilled++;
+                    EffectsSystem::createExplosion(data, targetX, targetY, 10, 200, 100, 50);
+                }
             }
             
-            projectile.active = false;
+            projectile.active = false; // Hủy đạn sau khi trúng
         } else {
+            // 3. Đạn tiếp tục bay nếu chưa tới đích
             projectile.x += (dx / dist) * projectile.speed * deltaTime;
             projectile.y += (dy / dist) * projectile.speed * deltaTime;
         }

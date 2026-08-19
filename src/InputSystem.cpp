@@ -1,7 +1,15 @@
 #include "InputSystem.h"
 #include <iostream>
+#include <random>
 #include "MapSystem.h"
 namespace {
+
+int chooseRandomMap() {
+    static std::random_device device;
+    static std::mt19937 generator(device());
+    std::uniform_int_distribution<int> distribution(1, 3);
+    return distribution(generator);
+}
 
 bool isOnPath(const GameData& data, int gridX, int gridY) {
     for (const auto& p : data.enemyPath) {
@@ -106,8 +114,8 @@ void InputSystem::handleInput(SDL_Event& event, GameData& data) {
             float btnX = panelX + (panelW - btnW) / 2.0f;
             float startBtnY = panelY + 80.0f;
 
-            if (isInsideRect(mouseX, mouseY, btnX, startBtnY, btnW, btnH)) 
-              MapSystem::resetGame(data, 1); // Click "Play"
+                        if (isInsideRect(mouseX, mouseY, btnX, startBtnY, btnW, btnH)) 
+                            MapSystem::resetGame(data, data.currentLevel); // Start selected mode
             else if (isInsideRect(mouseX, mouseY, btnX, startBtnY + (btnH + gap), btnW, btnH)) 
                 data.gameState = GameState::Settings;    // Click "Options"
             else if (isInsideRect(mouseX, mouseY, btnX, startBtnY + (btnH + gap) * 2, btnW, btnH)) 
@@ -119,11 +127,20 @@ void InputSystem::handleInput(SDL_Event& event, GameData& data) {
         if (data.gameState == GameState::Settings) {
             int centerX = (MAP_WIDTH * TILE_SIZE) / 2;
             int centerY = (MAP_HEIGHT * TILE_SIZE) / 2;
-            int btnW = 240, btnH = 50, gap = 20;
+            int btnW = 200, btnH = 60, gap = 30;
+            int startBtnY = centerY - 110;
 
-            if (isInsideRect(mouseX, mouseY, centerX - btnW/2, centerY - 20, btnW, btnH)) 
-                data.soundEnabled = !data.soundEnabled; // Bật/Tắt âm thanh
-            else if (isInsideRect(mouseX, mouseY, centerX - btnW/2, centerY - 20 + btnH + gap, btnW, btnH)) 
+            if (isInsideRect(mouseX, mouseY, centerX - btnW/2, startBtnY, btnW, btnH)) {
+                data.gameMode = GameMode::Normal;
+                data.currentLevel = 1;
+                data.gameState = GameState::MainMenu;
+            }
+            else if (isInsideRect(mouseX, mouseY, centerX - btnW/2, startBtnY + btnH + gap, btnW, btnH)) {
+                data.gameMode = GameMode::Endless;
+                data.currentLevel = chooseRandomMap();
+                data.gameState = GameState::MainMenu;
+            }
+            else if (isInsideRect(mouseX, mouseY, centerX - btnW/2, startBtnY + (btnH + gap) * 2, btnW, btnH))
                 data.gameState = GameState::MainMenu; // Nút BACK
             return;
         }
