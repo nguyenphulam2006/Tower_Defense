@@ -10,6 +10,7 @@ private:
     float masterVolume = 0.7f;
     bool soundEnabled = true;
     bool muted = false;
+    bool musicLoaded = false;
     
 public:
     SoundSystem();

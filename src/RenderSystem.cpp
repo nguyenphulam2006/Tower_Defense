@@ -98,46 +98,46 @@ bool RenderSystem::init() {
     renderer = SDL_CreateRenderer(window, nullptr);
     if (!renderer) return false;
     
-    assets.loadFont("title_font", "assets/font_title.ttf", 48, "../assets/font_title.ttf");
-    assets.loadFont("main_font", "assets/font_ui.ttf", 18, "../assets/font_ui.ttf");
+    assets.loadFont("title_font", "assets/Font/font_title.ttf", 48, "../assets/Font/font_title.ttf");
+    assets.loadFont("main_font", "assets/Font/font_ui.ttf", 18, "../assets/Font/font_ui.ttf");
     if (!assets.getFont("main_font") || !assets.getFont("title_font")) {
         std::cout << "Luu y: Co loi load font hoac thieu file font: " << SDL_GetError() << std::endl;
     }
 
     loadPaletteFromFile(palette);
     
-    assets.loadTexture(renderer, "grass", "assets/spr_grass_02.png", "../assets/spr_grass_02.png");
-    assets.loadTexture(renderer, "brick", "assets/brick.png", "../assets/brick.png");
-    assets.loadTexture(renderer, "heart", "assets/heart.png", "../assets/heart.png");
-    assets.loadTexture(renderer, "heart_animated", "assets/heart_animated_1.png", "../assets/heart_animated_1.png");
-    assets.loadTexture(renderer, "water", "assets/water.png", "../assets/water.png");
-    assets.loadTexture(renderer, "lava", "assets/lava.png", "../assets/lava.png");
-    assets.loadTexture(renderer, "enemy_slime", "assets/spr_normal_slime.png", "../assets/spr_normal_slime.png");
-    assets.loadTexture(renderer, "tower_archer", "assets/spr_tower_archer.png", "../assets/spr_tower_archer.png");
-    assets.loadTexture(renderer, "tower_archer_alt", "assets/spr_tower_crossbow.png", "../assets/spr_tower_crossbow.png");
-    assets.loadTexture(renderer, "arrow_projectile", "assets/spr_tower_archer_projectile.png", "../assets/spr_tower_archer_projectile.png");
-    assets.loadTexture(renderer, "arrow_projectile_alt", "assets/spr_tower_crossbow_projectile.png", "../assets/spr_tower_crossbow_projectile.png");
-    assets.loadTexture(renderer, "frost_projectile", "assets/spr_tower_ice_wizard_projectile.png", "../assets/spr_tower_ice_wizard_projectile.png");
-    assets.loadTexture(renderer, "frost_projectile_alt", "assets/spr_tower_poison_wizard_projectile.png", "../assets/spr_tower_poison_wizard_projectile.png");
-    assets.loadTexture(renderer, "tower_frost", "assets/spr_tower_ice_wizard.png", "../assets/spr_tower_ice_wizard.png");
-    assets.loadTexture(renderer, "tower_frost_alt", "assets/spr_tower_poison_wizard.png", "../assets/spr_tower_poison_wizard.png");
-    assets.loadTexture(renderer, "tower_cannon", "assets/spr_tower_cannon.png", "../assets/spr_tower_cannon.png");
-    assets.loadTexture(renderer, "cannon_projectile", "assets/spr_tower_cannon_projectile.png", "../assets/spr_tower_cannon_projectile.png");
-    assets.loadTexture(renderer, "tower_electric", "assets/spr_tower_lightning_tower.png", "../assets/spr_tower_lightning_tower.png");
-    assets.loadTexture(renderer, "tower_electric_alt", "assets/spr_tower_poison_wizard.png", "../assets/spr_tower_poison_wizard.png");
-    assets.loadTexture(renderer, "electric_projectile", "assets/spr_tower_lightning_tower_projectile.png", "../assets/spr_tower_lightning_tower_projectile.png");
-    assets.loadTexture(renderer, "tower_tesla", "assets/spr_tower_poison_wizard.png", "../assets/spr_tower_poison_wizard.png");
-    assets.loadTexture(renderer, "tesla_projectile", "assets/spr_tower_poison_wizard_projectile.png", "../assets/spr_tower_poison_wizard_projectile.png");
-    assets.loadTexture(renderer, "bg_main_menu", "assets/bg_main_menu.png", "../assets/bg_main_menu.png");
-    assets.loadTexture(renderer, "enemy_goblin", "assets/spr_goblin.png", "../assets/spr_goblin.png");
-    assets.loadTexture(renderer, "enemy_demon", "assets/spr_demon.png", "../assets/spr_demon.png");
-    assets.loadTexture(renderer, "enemy_ghost", "assets/spr_ghost.png", "../assets/spr_ghost.png");
-    assets.loadTexture(renderer, "enemy_zombie", "assets/spr_zombie.png", "../assets/spr_zombie.png");
-    assets.loadTexture(renderer, "enemy_skeleton", "assets/spr_skeleton.png", "../assets/spr_skeleton.png");
-    assets.loadTexture(renderer, "enemy_bat", "assets/spr_bat.png", "../assets/spr_bat.png");
-    assets.loadTexture(renderer, "enemy_king_slime", "assets/spr_king_slime.png", "../assets/spr_king_slime.png");
-    assets.loadTexture(renderer, "enemy_big_slime", "assets/spr_big_slime.png", "../assets/spr_big_slime.png");
-    assets.loadTexture(renderer, "enemy_normal_slime", "assets/spr_normal_slime.png", "../assets/spr_normal_slime.png");
+    assets.loadTexture(renderer, "grass", "assets/Image/spr_grass_02.png", "../assets/Image/spr_grass_02.png");
+    assets.loadTexture(renderer, "brick", "assets/Image/brick.png", "../assets/Image/brick.png");
+    assets.loadTexture(renderer, "heart", "assets/Image/heart.png", "../assets/Image/heart.png");
+    assets.loadTexture(renderer, "heart_animated", "assets/Image/heart_animated_1.png", "../assets/Image/heart_animated_1.png");
+    assets.loadTexture(renderer, "water", "assets/Image/water.png", "../assets/Image/water.png");
+    assets.loadTexture(renderer, "lava", "assets/Image/lava.png", "../assets/Image/lava.png");
+    assets.loadTexture(renderer, "enemy_slime", "assets/Image/spr_normal_slime.png", "../assets/Image/spr_normal_slime.png");
+    assets.loadTexture(renderer, "tower_archer", "assets/Image/spr_tower_archer.png", "../assets/Image/spr_tower_archer.png");
+    assets.loadTexture(renderer, "tower_archer_alt", "assets/Image/spr_tower_crossbow.png", "../assets/Image/spr_tower_crossbow.png");
+    assets.loadTexture(renderer, "arrow_projectile", "assets/Image/spr_tower_archer_projectile.png", "../assets/Image/spr_tower_archer_projectile.png");
+    assets.loadTexture(renderer, "arrow_projectile_alt", "assets/Image/spr_tower_crossbow_projectile.png", "../assets/Image/spr_tower_crossbow_projectile.png");
+    assets.loadTexture(renderer, "frost_projectile", "assets/Image/spr_tower_ice_wizard_projectile.png", "../assets/Image/spr_tower_ice_wizard_projectile.png");
+    assets.loadTexture(renderer, "frost_projectile_alt", "assets/Image/spr_tower_poison_wizard_projectile.png", "../assets/Image/spr_tower_poison_wizard_projectile.png");
+    assets.loadTexture(renderer, "tower_frost", "assets/Image/spr_tower_ice_wizard.png", "../assets/Image/spr_tower_ice_wizard.png");
+    assets.loadTexture(renderer, "tower_frost_alt", "assets/Image/spr_tower_poison_wizard.png", "../assets/Image/spr_tower_poison_wizard.png");
+    assets.loadTexture(renderer, "tower_cannon", "assets/Image/spr_tower_cannon.png", "../assets/Image/spr_tower_cannon.png");
+    assets.loadTexture(renderer, "cannon_projectile", "assets/Image/spr_tower_cannon_projectile.png", "../assets/Image/spr_tower_cannon_projectile.png");
+    assets.loadTexture(renderer, "tower_electric", "assets/Image/spr_tower_lightning_tower.png", "../assets/Image/spr_tower_lightning_tower.png");
+    assets.loadTexture(renderer, "tower_electric_alt", "assets/Image/spr_tower_poison_wizard.png", "../assets/Image/spr_tower_poison_wizard.png");
+    assets.loadTexture(renderer, "electric_projectile", "assets/Image/spr_tower_lightning_tower_projectile.png", "../assets/Image/spr_tower_lightning_tower_projectile.png");
+    assets.loadTexture(renderer, "tower_tesla", "assets/Image/spr_tower_poison_wizard.png", "../assets/Image/spr_tower_poison_wizard.png");
+    assets.loadTexture(renderer, "tesla_projectile", "assets/Image/spr_tower_poison_wizard_projectile.png", "../assets/Image/spr_tower_poison_wizard_projectile.png");
+    assets.loadTexture(renderer, "bg_main_menu", "assets/Image/bg_main_menu.png", "../assets/Image/bg_main_menu.png");
+    assets.loadTexture(renderer, "enemy_goblin", "assets/Image/spr_goblin.png", "../assets/Image/spr_goblin.png");
+    assets.loadTexture(renderer, "enemy_demon", "assets/Image/spr_demon.png", "../assets/Image/spr_demon.png");
+    assets.loadTexture(renderer, "enemy_ghost", "assets/Image/spr_ghost.png", "../assets/Image/spr_ghost.png");
+    assets.loadTexture(renderer, "enemy_zombie", "assets/Image/spr_zombie.png", "../assets/Image/spr_zombie.png");
+    assets.loadTexture(renderer, "enemy_skeleton", "assets/Image/spr_skeleton.png", "../assets/Image/spr_skeleton.png");
+    assets.loadTexture(renderer, "enemy_bat", "assets/Image/spr_bat.png", "../assets/Image/spr_bat.png");
+    assets.loadTexture(renderer, "enemy_king_slime", "assets/Image/spr_king_slime.png", "../assets/Image/spr_king_slime.png");
+    assets.loadTexture(renderer, "enemy_big_slime", "assets/Image/spr_big_slime.png", "../assets/Image/spr_big_slime.png");
+    assets.loadTexture(renderer, "enemy_normal_slime", "assets/Image/spr_normal_slime.png", "../assets/Image/spr_normal_slime.png");
     return true;
 }
 
@@ -448,9 +448,9 @@ void RenderSystem::draw(const GameData& data) {
 
             renderText("OPTIONS", centerX, panelY + 15.0f, {50, 50, 50, 255}, false, "main_font", true);
 
-            std::string soundText = data.soundEnabled ? "SOUND: ON" : "SOUND: OFF";
-            drawCodeButton(0, soundText, startBtnY);
-            drawCodeButton(1, "BACK", startBtnY);
+            drawCodeButton(0, "NORMAL", startBtnY);
+            drawCodeButton(1, "ENDLESS", startBtnY);
+            drawCodeButton(2, "BACK", startBtnY);
         }
  else if (data.gameState == GameState::Paused || data.gameState == GameState::GameOver) {
             // Hiệu ứng làm mờ nền
