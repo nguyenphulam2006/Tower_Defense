@@ -114,8 +114,8 @@ void InputSystem::handleInput(SDL_Event& event, GameData& data) {
             float btnX = panelX + (panelW - btnW) / 2.0f;
             float startBtnY = panelY + 80.0f;
 
-                        if (isInsideRect(mouseX, mouseY, btnX, startBtnY, btnW, btnH)) 
-                            MapSystem::resetGame(data, data.currentLevel); // Start selected mode
+            if (isInsideRect(mouseX, mouseY, btnX, startBtnY, btnW, btnH)) 
+                MapSystem::resetGame(data, data.currentLevel); // Start selected mode
             else if (isInsideRect(mouseX, mouseY, btnX, startBtnY + (btnH + gap), btnW, btnH)) 
                 data.gameState = GameState::Settings;    // Click "Options"
             else if (isInsideRect(mouseX, mouseY, btnX, startBtnY + (btnH + gap) * 2, btnW, btnH)) 
