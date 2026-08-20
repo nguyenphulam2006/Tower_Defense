@@ -118,10 +118,10 @@ inline EnemyConfig getEnemyConfig(EnemyType type) {
         case EnemyType::Boss:       return {80.0f, 1.3f, 50};
         case EnemyType::Goblin:     return {6.0f, 0.9f, 8};
         case EnemyType::Demon:      return {12.0f, 1.1f, 12};
-        case EnemyType::Ghost:      return {5.0f, 0.7f, 10}; 
+        case EnemyType::Ghost:      return {5.0f, 0.6f, 10};
         case EnemyType::Zombie:     return {25.0f, 1.6f, 15};
         case EnemyType::Skeleton:   return {8.0f, 1.0f, 8};
-        case EnemyType::Bat:        return {3.0f, 0.5f, 6}; 
+        case EnemyType::Bat:        return {3.0f, 0.5f, 6};
         case EnemyType::BigSlime:   return {30.0f, 1.4f, 20};
         case EnemyType::KingSlime:  return {100.0f, 1.2f, 100};
         

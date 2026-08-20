@@ -1,18 +1,18 @@
 # Tower Defense
 
-Game thủ thành 2D viết bằng C++ và SDL3. Người chơi xây tháp, chống lại các đợt quái vật và bảo vệ căn cứ trước khi 3 trái tim bị phá hủy.
+Game thủ thành 2D viết bằng C++ và SDL3. Người chơi xây tháp, chống lại các đợt quái vật và bảo vệ căn cứ, người chơi có 3 mạng.
 
 ## Tính năng
 
 - Bản đồ lưới 15x15 với cỏ, đường đi, căn cứ, nước và dung nham.
 - Đường đi của quái được đọc từ các tệp trong `assets/Map/`.
-- Ba chế độ: `Normal`, `Endless` và `Challenge`.
+- Ba chế độ: `Normal`, `Endless`.
 - Năm loại tháp:
   - `Basic`: tấn công cân bằng.
   - `Frost`: gây sát thương và làm chậm.
   - `Electric`: sát thương điện có thể lan sang mục tiêu khác.
   - `Cannon`: gây sát thương diện rộng.
-  - `Tesla`: tấn công nhanh ở khoảng cách gần.
+  - `Poison`: tấn công nhanh ở khoảng cách gần.
 - Nhiều loại quái với đặc tính và phần thưởng khác nhau.
 - Hệ thống wave, tiền, nâng cấp tháp, điểm số và thống kê trận đấu.
 - Hiệu ứng nổ, tia điện, hạt sáng, thanh máu enemy và nhạc nền.
@@ -45,10 +45,11 @@ Chạy file thực thi từ thư mục gốc dự án vì game sử dụng đư�
 ## Cách chơi
 
 1. Khởi động game và chọn chế độ chơi.
-2. Chọn loại tháp, sau đó nhấn chuột trái vào ô hợp lệ để xây tháp.
-3. Kết hợp các loại tháp để tận dụng sát thương, làm chậm, điện lan và sát thương diện rộng.
-4. Tiêu diệt enemy để nhận gold và tiếp tục xây dựng hoặc nâng cấp phòng thủ.
-5. Ngăn enemy đi tới căn cứ. Trận đấu kết thúc khi HP căn cứ giảm về 0.
+2. Chọn chế độ chơi phù hợp: `Normal`, `Endless` hoặc `Challenge`.
+3. Chọn loại tháp, sau đó nhấn chuột trái vào ô hợp lệ để xây tháp.
+4. Kết hợp các loại tháp để tận dụng sát thương, làm chậm, điện lan và sát thương diện rộng.
+5. Tiêu diệt enemy để nhận gold và tiếp tục xây dựng hoặc nâng cấp phòng thủ.
+6. Ngăn enemy đi tới căn cứ. Trận đấu kết thúc khi HP căn cứ giảm về 0.
 
 ## Điều khiển
 

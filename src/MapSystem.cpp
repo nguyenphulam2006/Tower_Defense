@@ -85,9 +85,44 @@ void MapSystem::loadAndGeneratePath(GameData& data) {
     for (int y = 0; y < MAP_HEIGHT; ++y) {
         for (int x = 0; x < MAP_WIDTH; ++x) {
             data.tileMap[y][x] = static_cast<TileType>(data.rawMap[y][x]);
-            if (x == 0 && data.tileMap[y][x] == TileType::Path) {
-                startPos = {x, y};
+        }
+    }
+
+    int bestScore = INT_MAX;
+    for (int y = 0; y < MAP_HEIGHT; ++y) {
+        for (int x = 0; x < MAP_WIDTH; ++x) {
+            if (data.tileMap[y][x] != TileType::Path) continue;
+
+            int validNeighborCount = 0;
+            for (int dir = 0; dir < 4; ++dir) {
+                int nx = x + ((dir == 0) ? 1 : (dir == 1) ? -1 : 0);
+                int ny = y + ((dir == 2) ? 1 : (dir == 3) ? -1 : 0);
+                if (nx >= 0 && nx < MAP_WIDTH && ny >= 0 && ny < MAP_HEIGHT) {
+                    if (data.tileMap[ny][nx] == TileType::Path || data.tileMap[ny][nx] == TileType::Base) {
+                        validNeighborCount++;
+                    }
+                }
             }
+
+            int boundaryBias = (x == 0 || y == 0 || x == MAP_WIDTH - 1 || y == MAP_HEIGHT - 1) ? 0 : 10;
+            int score = boundaryBias + validNeighborCount * 10 + x + y;
+
+            if (validNeighborCount <= 2 && score < bestScore) {
+                startPos = {x, y};
+                bestScore = score;
+            }
+        }
+    }
+
+    if (startPos.x == -1) {
+        for (int y = 0; y < MAP_HEIGHT; ++y) {
+            for (int x = 0; x < MAP_WIDTH; ++x) {
+                if (data.tileMap[y][x] == TileType::Path) {
+                    startPos = {x, y};
+                    break;
+                }
+            }
+            if (startPos.x != -1) break;
         }
     }
 
@@ -96,7 +131,7 @@ void MapSystem::loadAndGeneratePath(GameData& data) {
         std::cout << "Loi: Khong tim thay diem bat dau cua duong di!" << std::endl;
         return;
     }
-    
+
     std::vector<std::vector<bool>> visited(MAP_HEIGHT, std::vector<bool>(MAP_WIDTH, false));
     Position current = startPos;
     data.enemyPath.push_back(current);
@@ -119,13 +154,13 @@ void MapSystem::loadAndGeneratePath(GameData& data) {
                     visited[ny][nx] = true;
                     moved = true;
                     break;
-                } 
+                }
                 else if (data.tileMap[ny][nx] == TileType::Base) {
                     current = {nx, ny};
                     data.enemyPath.push_back(current);
                     reachedBase = true;
                     moved = true;
-                    break; 
+                    break;
                 }
             }
         }

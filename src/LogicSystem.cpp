@@ -92,16 +92,18 @@ void LogicSystem::update(GameData& data, float deltaTime) {
                     else type = EnemyType::KingSlime;
                 }
                 else if (data.currentWave >= 4) {
-                    if (randVal < 20) type = EnemyType::Demon;
-                    else if (randVal < 40) type = EnemyType::BigSlime;
-                    else if (randVal < 60) type = EnemyType::Zombie;
-                    else if (randVal < 80) type = EnemyType::Ghost;
-                    else type = EnemyType::Skeleton;
+                    if (randVal < 15) type = EnemyType::Demon;
+                    else if (randVal < 30) type = EnemyType::BigSlime;
+                    else if (randVal < 55) type = EnemyType::Ghost;
+                    else if (randVal < 75) type = EnemyType::Zombie;
+                    else if (randVal < 90) type = EnemyType::Skeleton;
+                    else type = EnemyType::Bat;
                 } 
                 else if (data.currentWave >= 2) {
-                    if (randVal < 30) type = EnemyType::Goblin;
-                    else if (randVal < 60) type = EnemyType::Bat;
-                    else if (randVal < 85) type = EnemyType::Skeleton;
+                    if (randVal < 25) type = EnemyType::Goblin;
+                    else if (randVal < 50) type = EnemyType::Ghost;
+                    else if (randVal < 75) type = EnemyType::Bat;
+                    else if (randVal < 90) type = EnemyType::Skeleton;
                     else type = EnemyType::Zombie;
                 } 
                 else {
@@ -122,6 +124,7 @@ void LogicSystem::update(GameData& data, float deltaTime) {
             if (data.gameMode == GameMode::Endless) {
                 waveHpScale *= 1.0f + (data.currentWave - 1) * 0.1f;
             }
+
             enemy.hp = cfg.baseHp * waveHpScale;
             enemy.maxHp = enemy.hp;
 
